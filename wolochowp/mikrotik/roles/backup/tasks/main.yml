@@ -1,3 +1,32 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for backup
+- name: Generate timestamp
+  set_fact:
+    backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+
+- name: Create backup file
+  routeros_command:
+    commands:
+      - >
+        {% if backup_format == 'backup' %}
+        /system/backup/save encryption=aes-sha256 password={{ BACKUP_PASS }} name={{ remote_host }}.{{ backup_timestamp }}
+        {% else %}
+        /export file={{ remote_host }}.{{ backup_timestamp }}
+        {% endif %}
+- name: Upload backup file to remote destination
+  routeros_command:
+    commands:
+      - >
+        /tool fetch upload=yes mode=sftp ascii=no
+        src-path={{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
+        dst-path={{ remote_backup_path }}{{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
+        address={{ remote_backup_host }} port={{ remote_backup_port }}
+        user={{ remote_backup_user }} password={{ remote_backup_password }}
+
+- name: Clean up backup file on router
+  routeros_command:
+      commands:
+      - >
+        /file remove {{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
