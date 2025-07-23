@@ -1,32 +1,48 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # tasks file for backup
+
 - name: Generate timestamp
   set_fact:
     backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
 
+- name: Define backup filename without extension
+  set_fact:
+    backup_filename: "{{ inventory_hostname }}.{{ backup_timestamp }}"
+
+- name: Define backup file extension
+  set_fact:
+    backup_extension: "{{ 'backup' if backup_format == 'backup' else 'rsc' }}"
+
+- name: Define full backup file name with extension
+  set_fact:
+    backup_full_filename: "{{ backup_filename }}.{{ backup_extension }}"
 
 - name: Create backup file
   routeros_command:
     commands:
-      - >
+      - >-
         {% if backup_format == 'backup' %}
-        /system/backup/save encryption=aes-sha256 password={{ BACKUP_PASS }} name={{ remote_host }}.{{ backup_timestamp }}
+        /system/backup/save encryption=aes-sha256 password={{ backup_pass }} name={{ backup_filename }}
         {% else %}
-        /export file={{ remote_host }}.{{ backup_timestamp }}
+        /export file={{ backup_filename }}
         {% endif %}
+
 - name: Upload backup file to remote destination
   routeros_command:
     commands:
-      - >
+      - >-
         /tool fetch upload=yes mode=sftp ascii=no
-        src-path={{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
-        dst-path={{ remote_backup_path }}{{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
-        address={{ remote_backup_host }} port={{ remote_backup_port }}
-        user={{ remote_backup_user }} password={{ remote_backup_password }}
+        src-path={{ backup_full_filename }}
+        dst-path={{ remote_backup_path }}{{ backup_full_filename }}
+        address={{ remote_backup_host }}
+        port={{ remote_backup_port }}
+        user={{ remote_backup_user }}
+        password={{ remote_backup_password }}
 
 - name: Clean up backup file on router
+  tags:
+    - cleanup
   routeros_command:
-      commands:
-      - >
-        /file remove {{ remote_host }}.{{ backup_timestamp }}.{{ 'backup' if backup_format == 'backup' else 'rsc' }}
+    commands:
+      - /file remove {{ backup_full_filename }}

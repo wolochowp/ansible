@@ -1,3 +1,11 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for backup
+backup_format: backup           # 'export' or 'backup'
+remote_protocol: sftp           # 'sftp' or 'ftp' etc.
+#remote_backup_user: "{{ lookup('env', 'BACKUP_USER') }}"
+#remote_backup_password: "{{ lookup('env', 'BACKUP_PASS') }}"
+remote_backup_host: backup.example.com
+remote_backup_path: /example/path/to/directory/
+remote_backup_port: 22
+backup_pass: CHANGE_ME
