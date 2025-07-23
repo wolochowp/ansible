@@ -1,0 +1,5 @@
+#ignore inventory file
+inventory.ini
+/inventories/*
+#ignore main playbook
+playbook.yml

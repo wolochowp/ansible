@@ -1,0 +1,8 @@
+---
+collections:
+# With just the collection name
+- wolochowp.mikrotik
+
+# With the collection name, version, and source options
+- name: Community.Routeros
+  version: '>=3.8.0'
