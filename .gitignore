@@ -3,3 +3,4 @@ inventory.ini
 /inventories/*
 #ignore main playbook
 playbook.yml
+ansible.cfg
