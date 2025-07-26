@@ -1,32 +1,39 @@
 # SPDX-License-Identifier: MIT-0
 ---
-# tasks file for backup
-
+# -----------------------------
+#  Setup facts about backup file
+# -----------------------------
 - name: Generate timestamp
+  tags: [facts_setup]
   set_fact:
     backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-
 - name: Define backup filename without extension
+  tags: [facts_setup]
   set_fact:
     backup_filename: "{{ inventory_hostname }}.{{ backup_timestamp }}"
-
 - name: Define backup file extension
+  tags: [facts_setup]
   set_fact:
     backup_extension: "{{ 'backup' if backup_format == 'backup' else 'rsc' }}"
-
 - name: Define full backup file name with extension
+  tags: [facts_setup]
   set_fact:
     backup_full_filename: "{{ backup_filename }}.{{ backup_extension }}"
 
 - name: Create backup file on MikroTik
-  routeros_command:
+  community.routeros.command:
     commands:
       - >-
         {% if backup_format == 'backup' %}
-        /system/backup/save encryption=aes-sha256 password={{ backup_pass }} name={{ backup_filename }}
+        /system/backup/save encryption=aes-sha256
+        {% if backup_pass is defined %}
+        password={{ backup_pass }}
+        {% endif %}
+        name={{ backup_filename }}
         {% else %}
         /export file={{ backup_filename }}
         {% endif %}
+  no_log: "{{ backup_pass is defined }}"
 
 # -----------------------------
 #  Direct Transfer (MikroTik → Remote)
@@ -42,7 +49,11 @@
         address={{ remote_backup_host }}
         port={{ remote_backup_port }}
         user={{ remote_backup_user }}
+        {% if remote_backup_password is defined %}
         password={{ remote_backup_password }}
+        {% endif %}
+  no_log: "{{ remote_backup_password is defined }}"
+  notify: Clean up backup file on MikroTik
 
 # -----------------------------
 #  Indirect Transfer (MikroTik → Ansible → Remote)
@@ -52,24 +63,11 @@
   ansible.netcommon.net_get:
     src: "{{ backup_full_filename }}"
     dest: "{{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }}"
+  notify: Clean up backup file on MikroTik
 
-
-- name: Upload backup from Ansible controller to remote destination via SFTP (SSH key)
+- name: Upload backup from Ansible controller to remote destination via SFTP
   when:
     - not direct_transfer | bool
-    - remote_backup_ssh_key is defined
-  ansible.builtin.shell:
-    cmd: >
-      echo "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}" |
-      sftp -i {{ remote_backup_ssh_key }} -oStrictHostKeyChecking=no -P {{ remote_backup_port }}
-      {{ remote_backup_user }}@{{ remote_backup_host }}
-  register: sftp_upload_ssh
-  changed_when: sftp_upload_ssh.rc == 0
-
-- name: Upload backup from Ansible controller to remote destination via SFTP (password fallback)
-  when:
-    - not direct_transfer | bool
-    - remote_backup_ssh_key is not defined
   ansible.builtin.shell:
     cmd: >
       echo "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}" |
@@ -77,18 +75,5 @@
       {{ remote_backup_user }}@{{ remote_backup_host }}
   register: sftp_upload_pw
   changed_when: sftp_upload_pw.rc == 0
+  notify: Remove temporary backup file on Ansible controller
 
-- name: Remove temporary backup file from Ansible controller
-  when: not direct_transfer | bool
-  ansible.builtin.file:
-    path: "{{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }}"
-    state: absent
-
-# -----------------------------
-#  Cleanup on Router
-# -----------------------------
-- name: Clean up backup file on MikroTik
-  tags: [cleanup]
-  routeros_command:
-    commands:
-      - /file remove {{ backup_full_filename }}
