@@ -25,9 +25,10 @@
     commands:
       - >-
         {% if backup_format == 'backup' %}
-        /system/backup/save encryption=aes-sha256
+        /system/backup/save
         {% if backup_pass is defined %}
         password={{ backup_pass }}
+        encryption=aes-sha256
         {% endif %}
         name={{ backup_filename }}
         {% else %}
