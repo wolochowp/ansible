@@ -18,7 +18,7 @@
   set_fact:
     backup_full_filename: "{{ backup_filename }}.{{ backup_extension }}"
 
-- name: Create backup file
+- name: Create backup file on MikroTik
   routeros_command:
     commands:
       - >-
@@ -28,21 +28,67 @@
         /export file={{ backup_filename }}
         {% endif %}
 
-- name: Upload backup file to remote destination
+# -----------------------------
+#  Direct Transfer (MikroTik → Remote)
+# -----------------------------
+- name: Upload backup file to remote destination (MikroTik push)
+  when: direct_transfer | bool
   routeros_command:
     commands:
       - >-
         /tool fetch upload=yes mode=sftp ascii=no
-        src-path={{ backup_full_filename }}
-        dst-path={{ remote_backup_path }}{{ backup_full_filename }}
+        src-path="{{ backup_full_filename }}"
+        dst-path="{{ remote_backup_path }}/{{ backup_full_filename }}"
         address={{ remote_backup_host }}
         port={{ remote_backup_port }}
         user={{ remote_backup_user }}
         password={{ remote_backup_password }}
 
-- name: Clean up backup file on router
-  tags:
-    - cleanup
+# -----------------------------
+#  Indirect Transfer (MikroTik → Ansible → Remote)
+# -----------------------------
+- name: Fetch backup file from MikroTik to Ansible controller
+  when: not direct_transfer | bool
+  ansible.netcommon.net_get:
+    src: "{{ backup_full_filename }}"
+    dest: "{{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }}"
+
+
+- name: Upload backup from Ansible controller to remote destination via SFTP (SSH key)
+  when:
+    - not direct_transfer | bool
+    - remote_backup_ssh_key is defined
+  ansible.builtin.shell:
+    cmd: >
+      echo "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}" |
+      sftp -i {{ remote_backup_ssh_key }} -oStrictHostKeyChecking=no -P {{ remote_backup_port }}
+      {{ remote_backup_user }}@{{ remote_backup_host }}
+  register: sftp_upload_ssh
+  changed_when: sftp_upload_ssh.rc == 0
+
+- name: Upload backup from Ansible controller to remote destination via SFTP (password fallback)
+  when:
+    - not direct_transfer | bool
+    - remote_backup_ssh_key is not defined
+  ansible.builtin.shell:
+    cmd: >
+      echo "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}" |
+      sftp -oStrictHostKeyChecking=no -P {{ remote_backup_port }}
+      {{ remote_backup_user }}@{{ remote_backup_host }}
+  register: sftp_upload_pw
+  changed_when: sftp_upload_pw.rc == 0
+
+- name: Remove temporary backup file from Ansible controller
+  when: not direct_transfer | bool
+  ansible.builtin.file:
+    path: "{{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }}"
+    state: absent
+
+# -----------------------------
+#  Cleanup on Router
+# -----------------------------
+- name: Clean up backup file on MikroTik
+  tags: [cleanup]
   routeros_command:
     commands:
       - /file remove {{ backup_full_filename }}

@@ -1,11 +1,14 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
-# defaults file for backup
 backup_format: backup           # 'export' or 'backup'
-remote_protocol: sftp           # 'sftp' or 'ftp' etc.
-#remote_backup_user: "{{ lookup('env', 'BACKUP_USER') }}"
-#remote_backup_password: "{{ lookup('env', 'BACKUP_PASS') }}"
+direct_transfer: false
+non_direct_transfer_tmp_path: "/tmp"
+set_pass_on_backup: yes         # Not available when export type used
+backup_pass: CHANGE_ME          # Only required if backup_format == 'backup'
+#remote_backup_ssh_key: "/home/ansible/.ssh/id_rsa"
+# remote location settings
+remote_backup_user: CHANGE_ME
+remote_backup_password: CHANGE_ME
 remote_backup_host: backup.example.com
-remote_backup_path: /example/path/to/directory/
+remote_backup_path: /example/path/to/directory
 remote_backup_port: 22
-backup_pass: CHANGE_ME
