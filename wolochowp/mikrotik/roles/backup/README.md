@@ -1,38 +1,60 @@
-Role Name
-=========
+# wolochowp.mikrotik.backup
 
-A brief description of the role goes here.
+An Ansible role to create and transfer backups from MikroTik RouterOS devices.
 
-Requirements
-------------
+---
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+## Description
 
-Role Variables
---------------
+This role automates the backup of MikroTik RouterOS devices (tested on RouterOS 7.19.3) by creating either `.backup` or `.rsc` export files and transferring them to a remote server via SFTP. It supports both:
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+- **Direct transfer**: MikroTik uploads the backup file directly to the remote SFTP server.
+- **Indirect transfer**: Backup is fetched to the Ansible controller first, then uploaded via SFTP.
 
-Dependencies
-------------
+Password-based or key-based authentication for SFTP is supported, with key-based as the default method.
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+---
 
-Example Playbook
-----------------
+## Requirements
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+- MikroTik RouterOS (tested on 7.19.3)
+- Ansible 2.9+ with `community.routeros` collection installed
+- SSH connectivity configured using:
+  - `ansible_connection=network_cli`
+  - `ansible_network_os=routeros`
+- Python packages for SSH on the controller (e.g., `paramiko` or `ansible-pylibssh`)
+- `sshpass` installed on the Ansible controller if password-based SFTP authentication is used
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+---
 
-License
--------
+## Role Variables
 
-BSD
+Most variables have sane defaults defined in `defaults/main.yml`. Only these are mandatory or typically set in inventory or extra vars:
 
-Author Information
-------------------
+| Variable                | Description                              | Default            |
+|-------------------------|------------------------------------------|--------------------|
+| `backup_format`         | Backup file format: `backup` or `rsc`    | `backup`           |
+| `direct_transfer`       | Whether MikroTik sends backup directly   | `false`            |
+| `remote_backup_host`    | Remote SFTP server hostname/IP            | _must be defined_  |
+| `remote_backup_user`    | Remote SFTP username                       | _must be defined_  |
+| `remote_backup_path`    | Remote directory to save backup files     | _must be defined_  |
+| `remote_backup_port`    | Remote SFTP server port                    | `22`               |
+| `remote_backup_password`| Optional password for SFTP (sshpass used) | `undefined`        |
+| `non_direct_transfer_tmp_path` | Temporary directory on Ansible controller | `/tmp`        |
+| `encrypt_pass`          | Optional encryption password for `.backup` format | `undefined` |
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+---
+
+## Example Inventory
+
+```ini
+[mikrotik]
+mikrotik ansible_host=192.168.1.1
+
+[mikrotik:vars]
+ansible_port=22
+ansible_user=ansible_automation
+ansible_connection=network_cli
+ansible_network_os=routeros
+
+

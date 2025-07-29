@@ -1,12 +1,25 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # -----------------------------
-# Validate variables
+# Validate variables and sshpass when needed
 # -----------------------------
 - name: Validate required variables
   ansible.builtin.fail:
     msg: "remote_backup_user and remote_backup_host must be defined"
   when: remote_backup_user is not defined or remote_backup_host is not defined
+
+- name: Ensure sshpass is available if password-based auth is used
+  when: remote_backup_password is defined
+  ansible.builtin.stat:
+    path: /usr/bin/sshpass
+  register: sshpass_check
+  delegate_to: localhost
+  run_once: true
+
+- name: Fail if sshpass is required but not found
+  when: remote_backup_password is defined and not sshpass_check.stat.exists
+  ansible.builtin.fail:
+    msg: "Password-based authentication requires 'sshpass' to be installed on the Ansible controller."
 
 # -----------------------------
 # Setup facts about backup file
@@ -95,10 +108,13 @@
   ansible.builtin.debug:
     msg: "Backup {{ backup_full_filename }} fetched to {{ non_direct_transfer_tmp_path }} from MikroTik."
 
-- name: Upload backup from Ansible controller to remote destination via SFTP
-  when: not direct_transfer | bool
+- name: Upload via SFTP using sshpass (password-based auth)
+  when: remote_backup_password is defined
   ansible.builtin.command:
     argv:
+      - sshpass
+      - -p
+      - "{{ remote_backup_password }}"
       - sftp
       - -oStrictHostKeyChecking=no
       - -P
@@ -107,6 +123,21 @@
     stdin: "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}"
   register: sftp_upload_pw
   changed_when: sftp_upload_pw.rc == 0
+  notify: Remove temporary backup file on Ansible controller
+  no_log: true
+
+- name: Upload via SFTP using key-based authentication (default)
+  when: remote_backup_password is not defined
+  ansible.builtin.command:
+    argv:
+      - sftp
+      - -oStrictHostKeyChecking=no
+      - -P
+      - "{{ remote_backup_port }}"
+      - "{{ remote_backup_user }}@{{ remote_backup_host }}"
+    stdin: "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}"
+  register: sftp_upload_key
+  changed_when: sftp_upload_key.rc == 0
   notify: Remove temporary backup file on Ansible controller
 
 - name: Report indirect SFTP upload result
