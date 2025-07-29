@@ -4,7 +4,7 @@ An Ansible role to create and transfer backups from MikroTik RouterOS devices.
 
 ---
 
-## Description
+## 📄 Description
 
 This role automates the backup of MikroTik RouterOS devices (tested on RouterOS 7.19.3) by creating either `.backup` or `.rsc` export files and transferring them to a remote server via SFTP.
 
@@ -34,7 +34,7 @@ Password-based or key-based authentication for SFTP is supported, with key-based
 
 ---
 
-## Requirements
+## ✅ Requirements
 
 - MikroTik RouterOS (tested on 7.19.3)
 - Ansible 2.9+ with `community.routeros` collection installed
@@ -46,7 +46,7 @@ Password-based or key-based authentication for SFTP is supported, with key-based
 
 ---
 
-## Role Variables
+## 📝 Role Variables
 
 Most variables have sane defaults defined in `defaults/main.yml`. Only these are mandatory or typically set in inventory or extra vars:
 
@@ -64,7 +64,7 @@ Most variables have sane defaults defined in `defaults/main.yml`. Only these are
 
 ---
 
-## Example Inventory
+## 🔧 Example Inventory
 
 ```ini
 [mikrotik]
@@ -85,7 +85,7 @@ backup_format=backup
 direct_transfer=false
 ```
 
-## Example Playbook
+## ▶️ Example Playbook
 
 ```yaml
 - name: Backup MikroTik router to remote SFTP server
@@ -109,20 +109,20 @@ Deletes the backup file from the MikroTik device once it has been successfully f
 
 ---
 
-## License
+## 🪪 License
 
 This role is distributed under the MIT-0 License, which means it is free to use, modify, and distribute without restrictions.
 
 ---
 
-## Author Information
+## 🧑‍💻 Author Information
 
 Paweł Wołochow
 Email: wolochowp@gmail.com
 
 ---
 
-## Notes
+## 📌 Notes
 
 If using password-based authentication for the remote SFTP server, ensure that sshpass is installed on your Ansible controller.
 
