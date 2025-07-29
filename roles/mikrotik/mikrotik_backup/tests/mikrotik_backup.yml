@@ -1,6 +1,16 @@
 #SPDX-License-Identifier: MIT-0
 ---
-- hosts: localhost
-  remote_user: root
+- name: Backup MikroTik router to remote SFTP server
+  hosts: mikrotik
+  gather_facts: false
   roles:
-    - backup
+    - role: mikrotik_backup
+      vars:
+        backup_format: "backup"                # or "rsc" or "both"
+        direct_transfer: false                 # Set true to let MikroTik push via fetch
+        remote_backup_host: "192.168.10.10"    # Remote server (SFTP)
+        remote_backup_user: "backupuser"
+        remote_backup_path: "/home/backupuser/mikrotik"
+        remote_backup_port: 22
+        remote_backup_password: "{{ vault_sftp_password }}"  # Optional if using SSH key
+        encrypt_pass: "{{ vault_backup_encrypt_pass }}"       # Optional encryption for .backup

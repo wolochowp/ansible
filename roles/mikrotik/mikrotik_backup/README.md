@@ -1,4 +1,4 @@
-# wolochowp.mikrotik.backup
+# mikrotik_backup
 
 An Ansible role to create and transfer backups from MikroTik RouterOS devices.
 
@@ -49,13 +49,34 @@ Most variables have sane defaults defined in `defaults/main.yml`. Only these are
 
 ```ini
 [mikrotik]
-mikrotik ansible_host=192.168.1.1
+router1 ansible_host=192.0.2.1
 
 [mikrotik:vars]
 ansible_port=22
-ansible_user=ansible_automation
+ansible_user=ansible_user
 ansible_connection=network_cli
 ansible_network_os=routeros
+
+remote_backup_user=backupuser
+remote_backup_host=192.0.2.100
+remote_backup_path=/srv/backups/mikrotik
+remote_backup_port=22
+
+backup_format=backup
+direct_transfer=false
+```
+
+## Example Playbook
+
+```yaml
+- name: Backup MikroTik router to remote SFTP server
+  hosts: mikrotik
+  gather_facts: false
+  roles:
+    - role: mikrotik_backup
+      vars:
+        remote_backup_password: "{{ vault_sftp_password }}"  # Optional if using SSH key
+        encrypt_pass: "{{ vault_backup_encrypt_pass }}"       # Optional encryption for .backup
 ```
 ## Handlers
 
@@ -90,6 +111,6 @@ SSH connections to MikroTik devices rely on the network_cli connection plugin an
 
 Tested with MikroTik RouterOS version 7.19.3.
 
-Store sensitive passwords such as remote_backup_password securely, preferably using Ansible Vault or environment variables.
+Store sensitive passwords such as remote_backup_password securely, preferably using Ansible Vault as in example playbook or environment variables.
 
 ---
