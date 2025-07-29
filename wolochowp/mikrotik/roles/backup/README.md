@@ -56,24 +56,35 @@ ansible_port=22
 ansible_user=ansible_automation
 ansible_connection=network_cli
 ansible_network_os=routeros
-
-
-
+```
 ## Handlers
-Removes temporary backup files on the Ansible controller after transfer.
+This role provides the following handlers:
 
-Cleans up backup files on MikroTik after fetching/uploading.
+- Remove temporary backup file on Ansible controller
+Removes the backup file stored temporarily on the Ansible controller after successful upload to the remote server.
+
+- Clean up backup file on MikroTik
+Deletes the backup file from the MikroTik device once it has been successfully fetched or uploaded.
+---
 
 ## License
-MIT-0 License
 
-Author Information
+This role is distributed under the MIT-0 License, which means it is free to use, modify, and distribute without restrictions.
+---
+
+## Author Information
+
 Paweł Wołochow
 Email: wolochowp@gmail.com
+---
 
 ## Notes
-Ensure sshpass is installed on the Ansible controller if you use password-based authentication.
 
-SSH connection to MikroTik uses network_cli with ansible_network_os=routeros for reliable RouterOS support.
+If using password-based authentication for the remote SFTP server, ensure that sshpass is installed on your Ansible controller.
+
+SSH connections to MikroTik devices rely on the network_cli connection plugin and the routeros network OS setting for proper communication.
 
 Tested with MikroTik RouterOS version 7.19.3.
+
+Store sensitive passwords such as remote_backup_password securely, preferably using Ansible Vault or environment variables.
+---
