@@ -12,6 +12,6 @@
 # -----------------------------
 - name: Clean up backup file on MikroTik
   tags: [cleanup]
-  community.routeros_command:
+  community.routeros.command:
     commands:
       - '/file remove "{{ backup_full_filename }}"'
