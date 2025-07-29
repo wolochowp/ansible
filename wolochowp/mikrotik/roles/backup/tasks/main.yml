@@ -1,6 +1,14 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # -----------------------------
+# Validate variables
+# -----------------------------
+- name: Validate required variables
+  ansible.builtin.fail:
+    msg: "remote_backup_user and remote_backup_host must be defined"
+  when: remote_backup_user is not defined or remote_backup_host is not defined
+
+# -----------------------------
 #  Setup facts about backup file
 # -----------------------------
 - name: Generate timestamp
@@ -26,15 +34,15 @@
       - >-
         {% if backup_format == 'backup' %}
         /system/backup/save
-        {% if backup_pass is defined %}
-        password={{ backup_pass }}
+        {% if encrypt_pass is defined %}
+        password={{ encrypt_pass }}
         encryption=aes-sha256
         {% endif %}
         name={{ backup_filename }}
         {% else %}
         /export file={{ backup_filename }}
         {% endif %}
-  no_log: "{{ backup_pass is defined }}"
+#  no_log: "{{ encrypt_pass is defined }}"
 
 # -----------------------------
 #  Direct Transfer (MikroTik → Remote)

@@ -3,7 +3,6 @@
 # handlers file for backup
 - name: Remove temporary backup file on Ansible controller
   tags: [cleanup]
-  when: not direct_transfer | bool
   ansible.builtin.file:
     path: "{{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }}"
     state: absent
@@ -13,6 +12,6 @@
 # -----------------------------
 - name: Clean up backup file on MikroTik
   tags: [cleanup]
-  routeros_command:
+  community.routeros_command:
     commands:
-      - /file remove {{ backup_full_filename }}
+      - '/file remove "{{ backup_full_filename }}"'
