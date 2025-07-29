@@ -59,7 +59,6 @@
         /export file={{ backup_filename }}
         {% endif %}
   register: backup_result
-  no_log: "{{ encrypt_pass is defined }}"
 
 - name: Report backup creation
   ansible.builtin.debug:
@@ -84,7 +83,6 @@
         password={{ remote_backup_password }}
         {% endif %}
   register: direct_upload_result
-  no_log: "{{ remote_backup_password is defined }}"
   notify: Clean up backup file on MikroTik
 
 - name: Report direct upload result
@@ -108,36 +106,26 @@
   ansible.builtin.debug:
     msg: "Backup {{ backup_full_filename }} fetched to {{ non_direct_transfer_tmp_path }} from MikroTik."
 
-- name: Upload via SFTP using sshpass (password-based auth)
-  when: remote_backup_password is defined
+- name: Upload backup via SFTP (password or key-based auth)
   ansible.builtin.command:
-    argv:
-      - sshpass
-      - -p
-      - "{{ remote_backup_password }}"
-      - sftp
-      - -oStrictHostKeyChecking=no
-      - -P
-      - "{{ remote_backup_port }}"
-      - "{{ remote_backup_user }}@{{ remote_backup_host }}"
+    argv: >-
+      {{
+        (remote_backup_password is defined) 
+        | ternary(
+            [
+              'sshpass', '-p', remote_backup_password,
+              'sftp', '-oStrictHostKeyChecking=no', '-P', remote_backup_port|string,
+              remote_backup_user ~ '@' ~ remote_backup_host
+            ],
+            [
+              'sftp', '-oStrictHostKeyChecking=no', '-P', remote_backup_port|string,
+              remote_backup_user ~ '@' ~ remote_backup_host
+            ]
+          )
+      }}
     stdin: "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}"
-  register: sftp_upload_pw
-  changed_when: sftp_upload_pw.rc == 0
-  notify: Remove temporary backup file on Ansible controller
-  no_log: true
-
-- name: Upload via SFTP using key-based authentication (default)
-  when: remote_backup_password is not defined
-  ansible.builtin.command:
-    argv:
-      - sftp
-      - -oStrictHostKeyChecking=no
-      - -P
-      - "{{ remote_backup_port }}"
-      - "{{ remote_backup_user }}@{{ remote_backup_host }}"
-    stdin: "put {{ non_direct_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}"
-  register: sftp_upload_key
-  changed_when: sftp_upload_key.rc == 0
+  register: sftp_upload_result
+  changed_when: sftp_upload_result.rc == 0
   notify: Remove temporary backup file on Ansible controller
 
 - name: Report indirect SFTP upload result
