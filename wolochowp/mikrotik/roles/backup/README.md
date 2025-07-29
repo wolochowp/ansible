@@ -58,3 +58,22 @@ ansible_connection=network_cli
 ansible_network_os=routeros
 
 
+
+## Handlers
+Removes temporary backup files on the Ansible controller after transfer.
+
+Cleans up backup files on MikroTik after fetching/uploading.
+
+## License
+MIT-0 License
+
+Author Information
+Paweł Wołochow
+Email: wolochowp@gmail.com
+
+## Notes
+Ensure sshpass is installed on the Ansible controller if you use password-based authentication.
+
+SSH connection to MikroTik uses network_cli with ansible_network_os=routeros for reliable RouterOS support.
+
+Tested with MikroTik RouterOS version 7.19.3.
