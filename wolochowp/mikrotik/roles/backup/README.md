@@ -58,6 +58,7 @@ ansible_connection=network_cli
 ansible_network_os=routeros
 ```
 ## Handlers
+
 This role provides the following handlers:
 
 - Remove temporary backup file on Ansible controller
@@ -65,17 +66,20 @@ Removes the backup file stored temporarily on the Ansible controller after succe
 
 - Clean up backup file on MikroTik
 Deletes the backup file from the MikroTik device once it has been successfully fetched or uploaded.
+
 ---
 
 ## License
 
 This role is distributed under the MIT-0 License, which means it is free to use, modify, and distribute without restrictions.
+
 ---
 
 ## Author Information
 
 Paweł Wołochow
 Email: wolochowp@gmail.com
+
 ---
 
 ## Notes
@@ -87,4 +91,5 @@ SSH connections to MikroTik devices rely on the network_cli connection plugin an
 Tested with MikroTik RouterOS version 7.19.3.
 
 Store sensitive passwords such as remote_backup_password securely, preferably using Ansible Vault or environment variables.
+
 ---
