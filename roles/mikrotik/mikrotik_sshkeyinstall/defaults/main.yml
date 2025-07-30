@@ -1,5 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
+allow_flushing_pubkeys: true
+verify_users_exist: true
 mikrotik_ssh_users: []
 # Example:
 # mikrotik_ssh_users:
