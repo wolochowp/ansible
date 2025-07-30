@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+mikrotik_ssh_users: []
+# Example:
+# mikrotik_ssh_users:
+#   - name: Pawel
+#     pubkey_file: Pawel.pub
