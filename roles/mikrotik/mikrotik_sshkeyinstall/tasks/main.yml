@@ -42,12 +42,51 @@
   set_fact:
     user_verified_users: >-
       {{
-        (verify_users_exist | default(false)) 
+        (verify_users_exist | default(false))
         | ternary(
             _raw_input_users
             | selectattr('name', 'in', existing_mikrotik_users | default([]))
             | list,
             _raw_input_users
+          )
+      }}
+
+# --- Public key file existence check ---
+
+- name: Find users with missing pubkey files
+  set_fact:
+    missing_pubkey_users: >-
+      {{
+        user_verified_users
+        | selectattr('pubkey_file', 'defined')
+        | rejectattr('pubkey_file', 'in', lookup('ansible.builtin.fileglob', pubkeys_path + '/*', wantlist=True) | map('basename') | list)
+        | list
+      }}
+  when: verify_pubkeys | default(false)
+  
+
+- name: Fail on missing pubkey files if required
+  fail:
+    msg: "Missing public key files for: {{ missing_pubkey_users | map(attribute='pubkey_file') | join(', ') }}"
+  when: verify_pubkeys and fail_on_invalid_pubkey and missing_pubkey_users | length > 0
+  
+
+- name: Warn about missing public key files and skip them
+  debug:
+    msg: "Skipping users with missing public key files: {{ missing_pubkey_users | map(attribute='pubkey_file') | join(', ') }}"
+  when: verify_pubkeys and missing_pubkey_users | length > 0 and not fail_on_invalid_pubkey
+
+- name: Filter users whose pubkey files exist
+  set_fact:
+    users_with_pubkey_files: >-
+      {{
+        (verify_pubkeys | default(false))
+        | ternary(
+            user_verified_users
+            | rejectattr('pubkey_file', 'undefined')
+            | rejectattr('pubkey_file', 'in', missing_pubkey_users | map(attribute='pubkey_file') | list)
+            | list,
+            user_verified_users
           )
       }}
 
@@ -61,9 +100,9 @@
 - name: Load public keys and add pubkey_type, pubkey_data, pubkey_filename
   set_fact:
     validated_ssh_users: "{{ validated_ssh_users + [ user_with_key ] }}"
-  loop: "{{ user_verified_users | selectattr('pubkey_file', 'defined') | list }}"
+  loop: "{{ users_with_pubkey_files }}"
   vars:
-    key_path: "{{ role_path }}/files/{{ item.pubkey_file }}"
+    key_path: "{{ pubkeys_path }}/{{ item.pubkey_file }}"
     pubkey_data: "{{ lookup('file', key_path) }}"
     pubkey_type: "{{ pubkey_data.split()[0] }}"
     user_with_key: >-
@@ -84,7 +123,7 @@
       {{ validated_ssh_users | rejectattr('pubkey_type', 'in', ['ssh-rsa', 'ssh-ed25519']) | list }}
   when: verify_pubkeys | default(false)
 
-- name: Warn about invalid keys
+- name: Warn about invalid keys and skip them
   debug:
     msg: >-
       Skipping users with invalid public key files:
@@ -98,35 +137,67 @@
       {{ invalid_key_users | map(attribute='pubkey_filename') | join(', ') }}
   when: verify_pubkeys and fail_on_invalid_pubkey and invalid_key_users | length > 0
 
+# --- Skip keys where user is invalid (if verify_users_exist is on) ---
+
+- name: Identify keys with invalid user binding
+  set_fact:
+    keys_with_invalid_user: >-
+      {{
+        (verify_users_exist | default(false))
+        | ternary(
+            valid_key_users | rejectattr('name', 'in', existing_mikrotik_users | default([])) | list,
+            []
+          )
+      }}
+
+- name: Warn about skipping keys with invalid user binding
+  debug:
+    msg: "Skipping public keys because their users are invalid (not existing on MikroTik): {{ keys_with_invalid_user | map(attribute='pubkey_filename') | join(', ') }}"
+  when: keys_with_invalid_user | length > 0
+
+- name: Filter out keys bound to invalid users
+  set_fact:
+    filtered_valid_key_users: >-
+      {{
+        valid_key_users
+        | rejectattr('name', 'in', keys_with_invalid_user | map(attribute='name') | list)
+        | list
+      }}
+
 # --- Prepare final list for deployment ---
 
-- name: Set final_ssh_users to those with valid keys if verifying pubkeys, else to user_verified_users
+- name: Set final_ssh_users based on verifications
   set_fact:
     final_ssh_users: >-
       {{
         (verify_pubkeys | default(false))
-        | ternary(valid_key_users, user_verified_users)
+        | ternary(
+            (verify_users_exist | default(false))
+            | ternary(filtered_valid_key_users, valid_key_users),
+            (verify_users_exist | default(false))
+            | ternary(user_verified_users, _raw_input_users)
+          )
       }}
 
 # --- Optionally flush keys on MikroTik ---
 
-- name: Optionally flush all existing ssh keys for each user
+- name: Optionally flush all existing ssh keys for each user with pubkey provided
   community.routeros.command:
     commands:
       - "/user ssh-keys remove [find user={{ item.name }}]"
   loop: "{{ final_ssh_users }}"
-  when: allow_flushing_pubkeys
+  when: allow_flushing_pubkeys | default(false)
 
-# --- Upload and import keys ---
+# --- Upload keys and import them ---
 
-- name: Upload public key files to MikroTik device
+- name: Upload public key files to MikroTik device with ansible_ prefix
   ansible.netcommon.net_put:
-    src: "{{ role_path }}/files/{{ item.pubkey_file }}"
-    dest: "{{ item.pubkey_file }}"
+    src: "{{ pubkeys_path }}/{{ item.pubkey_file }}"
+    dest: "ansible_{{ item.pubkey_file }}"
   loop: "{{ final_ssh_users }}"
 
-- name: Import public keys on MikroTik device
+- name: Import public key on MikroTik device from ansible_ prefixed file
   community.routeros.command:
     commands:
-      - "/user ssh-keys import public-key-file={{ item.pubkey_file }} user={{ item.name }}"
+      - "/user ssh-keys import public-key-file=ansible_{{ item.pubkey_file }} user={{ item.name }}"
   loop: "{{ final_ssh_users }}"

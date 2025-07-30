@@ -9,5 +9,5 @@ pubkeys_path: "{{ role_path }}/files"
 mikrotik_ssh_users: []
 # Example:
 # mikrotik_ssh_users:
-#   - name: Pawel
-#     pubkey_file: Pawel.pub
+#   - name: John
+#     pubkey_file: John.pub

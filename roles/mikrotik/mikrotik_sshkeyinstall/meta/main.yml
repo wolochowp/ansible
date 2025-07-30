@@ -6,7 +6,6 @@ galaxy_info:
   platforms:
     - name: RouterOS
       versions:
-        - 6
         - 7
   galaxy_tags:
     - mikrotik
