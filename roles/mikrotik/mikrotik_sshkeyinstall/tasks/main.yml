@@ -1,14 +1,23 @@
 #SPDX-License-Identifier: MIT-0
 ---
-- name: Copy public key to MikroTik device
+
+- name: Optionally flush all existing ssh keys for each user
+  community.routeros.command:
+    commands:
+      - "/user ssh-keys remove [find user={{ item.name }}]"
+  loop: "{{ mikrotik_ssh_users }}"
+  when: allow_flushing_pubkeys | default(false)
+
+# Upload all keys, using their real filename
+- name: Upload public key to MikroTik device
   ansible.netcommon.net_put:
     src: "{{ role_path }}/files/{{ item.pubkey_file }}"
-    dest: "{{ item.name }}.pub"
+    dest: "{{ item.pubkey_file }}"
   loop: "{{ mikrotik_ssh_users }}"
 
+# Import keys using correct file
 - name: Import public key from uploaded file
   community.routeros.command:
     commands:
       - "/user ssh-keys import public-key-file={{ item.pubkey_file }} user={{ item.name }}"
   loop: "{{ mikrotik_ssh_users }}"
-  

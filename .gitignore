@@ -4,3 +4,4 @@ inventory.ini
 #ignore main playbook
 playbook.yml
 ansible.cfg
+/roles/mikrotik/mikrotik_sshkeyinstall/files/*
