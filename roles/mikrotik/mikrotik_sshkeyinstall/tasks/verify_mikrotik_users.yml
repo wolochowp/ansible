@@ -1,0 +1,32 @@
+- name: Determine valid and invalid users
+  set_fact:
+    verified_mikrotik_users: >-
+      {{
+        mikrotik_ssh_users
+        | selectattr('name', 'in', existing_mikrotik_users)
+        | list
+        if verify_users_exist else mikrotik_ssh_users
+      }}
+    invalid_mikrotik_users: >-
+      {{
+        mikrotik_ssh_users
+        | rejectattr('name', 'in', existing_mikrotik_users)
+        | list
+        if verify_users_exist else []
+      }}
+
+- name: Warn about users not found on MikroTik
+  debug:
+    msg: "Skipping users not found on MikroTik: {{ invalid_mikrotik_users | map(attribute='name') | join(', ') }}"
+  when:
+    - verify_users_exist
+    - invalid_mikrotik_users | length > 0
+    - not fail_on_invalid_user
+
+- name: Fail if any invalid user and strict checking is enabled
+  fail:
+    msg: "Invalid users found (not existing on MikroTik): {{ invalid_mikrotik_users | map(attribute='name') | join(', ') }}"
+  when:
+    - verify_users_exist
+    - fail_on_invalid_user
+    - invalid_mikrotik_users | length > 0

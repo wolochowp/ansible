@@ -1,0 +1,5 @@
+- name: Import public key on MikroTik device from ansible_ prefixed file
+  community.routeros.command:
+    commands:
+      - "/user ssh-keys import public-key-file=ansible_{{ item.pubkey_file }} user={{ item.name }}"
+  loop: "{{ final_ssh_users }}"

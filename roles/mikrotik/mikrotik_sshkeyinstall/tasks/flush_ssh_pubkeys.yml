@@ -1,0 +1,6 @@
+- name: Optionally flush all existing ssh keys for each user with pubkey provided
+  community.routeros.command:
+    commands:
+      - "/user ssh-keys remove [find user={{ item.name }}]"
+  loop: "{{ final_ssh_users }}"
+  when: allow_flushing_pubkeys 

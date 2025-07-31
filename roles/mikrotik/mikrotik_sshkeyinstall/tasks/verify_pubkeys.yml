@@ -1,0 +1,88 @@
+- name: Gather all pubkey filenames from input users
+  set_fact:
+    input_pubkey_files: >-
+      {{
+        mikrotik_ssh_users
+        | selectattr('pubkey_file', 'defined')
+        | map(attribute='pubkey_file')
+        | list
+      }}
+
+- name: Find missing pubkey files
+  set_fact:
+    missing_pubkeys: >-
+      {{
+        input_pubkey_files
+        | difference(
+            lookup('ansible.builtin.fileglob', pubkeys_path + '/*', wantlist=True) | map('basename') | list
+          )
+      }}
+  when: verify_pubkeys
+
+- name: Fail on missing pubkey files if strict
+  fail:
+    msg: "Missing public key files: {{ missing_pubkeys | join(', ') }}"
+  when:
+    - verify_pubkeys
+    - fail_on_invalid_pubkey
+    - missing_pubkeys | length > 0
+
+- name: Warn about missing pubkey files (non-fatal)
+  debug:
+    msg: "Skipping missing public key files: {{ missing_pubkeys | join(', ') }}"
+  when:
+    - verify_pubkeys
+    - not fail_on_invalid_pubkey
+    - missing_pubkeys | length > 0
+
+- name: Initialize valid_pubkeys list
+  set_fact:
+    valid_pubkeys: []
+  when: verify_pubkeys
+
+- name: Load and verify pubkey files
+  set_fact:
+    valid_pubkeys: "{{ valid_pubkeys + [ {'pubkey_file': item, 'pubkey_data': pubkey_data, 'pubkey_type': pubkey_type} ] }}"
+  vars:
+    pubkey_data: "{{ lookup('file', pubkeys_path + '/' + item) }}"
+    pubkey_type: "{{ pubkey_data.split()[0] }}"
+  loop: "{{ input_pubkey_files | difference(missing_pubkeys | default([])) }}"
+  when: verify_pubkeys
+  failed_when: false
+
+- name: Set invalid_pubkeys list based on invalid key types
+  set_fact:
+    invalid_pubkeys: >-
+      {{
+        valid_pubkeys
+        | rejectattr('pubkey_type', 'in', ['ssh-rsa', 'ssh-ed25519'])
+        | map(attribute='pubkey_file')
+        | list
+      }}
+  when: verify_pubkeys
+
+- name: Filter out invalid keys from valid_pubkeys list
+  set_fact:
+    valid_pubkeys: >-
+      {{
+        valid_pubkeys
+        | selectattr('pubkey_type', 'in', ['ssh-rsa', 'ssh-ed25519'])
+        | list
+      }}
+  when: verify_pubkeys
+
+- name: Fail on invalid pubkey files if strict
+  fail:
+    msg: "Invalid or unsupported public key files (only ssh-rsa and ssh-ed25519 allowed): {{ invalid_pubkeys | join(', ') }}"
+  when:
+    - verify_pubkeys
+    - fail_on_invalid_pubkey
+    - invalid_pubkeys | length > 0
+
+- name: Warn about invalid pubkey files (non-fatal)
+  debug:
+    msg: "Skipping invalid or unsupported public key files: {{ invalid_pubkeys | join(', ') }}"
+  when:
+    - verify_pubkeys
+    - not fail_on_invalid_pubkey
+    - invalid_pubkeys | length > 0

@@ -1,0 +1,16 @@
+- name: Fetch MikroTik users 
+  community.routeros.command:
+    commands:
+      - /user print detail
+  register: mikrotik_users_detail
+  when: verify_users_exist
+
+- name: Extract MikroTik usernames to existing_mikrotik_users
+  set_fact:
+    existing_mikrotik_users: "{{ mikrotik_users_detail.stdout[0] | regex_findall('name=\"([^\"]+)\"') }}"
+  when: verify_users_exist
+
+- name: Default existing_mikrotik_users to empty list if not verifying
+  set_fact:
+    existing_mikrotik_users: []
+  when: not verify_users_exist

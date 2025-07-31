@@ -1,0 +1,9 @@
+- name: Determine final users with valid keys to process
+  set_fact:
+    final_ssh_users: >-
+      {{
+        mikrotik_ssh_users
+        | selectattr('name', 'in', verified_mikrotik_users | map(attribute='name') | list)
+        | selectattr('pubkey_file', 'in', valid_pubkeys | map(attribute='pubkey_file') | list)
+        | list
+      }}

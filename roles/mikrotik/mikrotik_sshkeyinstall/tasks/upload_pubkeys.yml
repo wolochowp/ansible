@@ -1,0 +1,5 @@
+- name: Upload public key files to MikroTik device with ansible_ prefix
+  ansible.netcommon.net_put:
+    src: "{{ pubkeys_path }}/{{ item.pubkey_file }}"
+    dest: "ansible_{{ item.pubkey_file }}"
+  loop: "{{ final_ssh_users }}"

@@ -4,7 +4,7 @@ allow_flushing_pubkeys: false
 verify_users_exist: true
 fail_on_invalid_user: false
 verify_pubkeys: true
-fail_on_invalid_pubkey: false
+fail_on_invalid_pubkey: true
 pubkeys_path: "{{ role_path }}/files"
 mikrotik_ssh_users: []
 # Example:
