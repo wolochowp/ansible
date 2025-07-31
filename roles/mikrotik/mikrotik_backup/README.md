@@ -125,13 +125,6 @@ This role is distributed under the MIT-0 License, which means it is free to use,
 
 ---
 
-## 🧑‍💻 Author Information
-
-**Paweł Wołochow**  
-Email: [wolochowp@gmail.com](mailto:wolochowp@gmail.com)  
-GitHub: [wolochowp](https://github.com/wolochowp)
-
----
 
 ## 📌 Notes
 

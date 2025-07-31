@@ -152,9 +152,3 @@ ansible_network_os=routeros
 This role is licensed under the **MIT-0 License**, allowing free use, modification, and distribution with no restrictions.
 
 ---
-
-## 🧑‍💻 Author Information
-
-**Paweł Wołochow**  
-Email: [wolochowp@gmail.com](mailto:wolochowp@gmail.com)  
-GitHub: [wolochowp](https://github.com/wolochowp)

@@ -1,4 +1,4 @@
-# Ansible Roles by Paweł Wołochow
+# Ansible Roles
 
 A curated collection of reusable and well-structured **Ansible roles** designed for automation of real-world infrastructure tasks — beginning with MikroTik RouterOS backup management and SSH key provisioning.
 
@@ -35,14 +35,6 @@ Role to install SSH public keys for MikroTik users
   - Flushing **only affects users** that have public keys defined in the play — other users and their keys are untouched.
 
 > ⚠️ By default, `allow_flushing_pubkeys` is **disabled** to avoid unintentional key removal. Enable it only when managing a user's keys fully via Ansible.
-
----
-
-## 🧑‍💻 Author Information
-
-Paweł Wołochow  
-📧 wolochowp@gmail.com  
-🪪 License: MIT-0 (no restrictions on use, distribution, or modification)
 
 ---
 
