@@ -1,0 +1,34 @@
+---
+- name: Fetch backup file to controller
+  ansible.netcommon.net_get:
+    src: "{{ backup_full_filename }}"
+    dest: "{{ indirect_transfer_tmp_path }}/{{ backup_full_filename }}"
+  register: fetch_result
+  notify: Clean up backup file on MikroTik
+  
+- name: Confirm fetch from MikroTik
+  ansible.builtin.debug:
+    msg: "Backup fetched to {{ indirect_transfer_tmp_path }}/{{ backup_full_filename }}."
+  when: fetch_result is defined
+
+- name: Upload fetched backup via SFTP
+  ansible.builtin.command:
+    argv: >-
+      {{
+        (remote_backup_password is defined) | ternary(
+          ['sshpass', '-p', remote_backup_password,
+           'sftp', '-oStrictHostKeyChecking=no', '-P', remote_backup_port|string,
+           remote_backup_user ~ '@' ~ remote_backup_host],
+          ['sftp', '-oStrictHostKeyChecking=no', '-P', remote_backup_port|string,
+           remote_backup_user ~ '@' ~ remote_backup_host]
+        )
+      }}
+    stdin: "put {{ indirect_transfer_tmp_path }}/{{ backup_full_filename }} {{ remote_backup_path }}/{{ backup_full_filename }}"
+  register: sftp_upload_result
+  changed_when: sftp_upload_result.rc == 0
+  notify: Remove temporary backup file on Ansible controller
+
+- name: Confirm indirect upload
+  ansible.builtin.debug:
+    msg: "Backup {{ backup_full_filename }} uploaded via controller to {{ remote_backup_host }}:{{ remote_backup_path }}"
+  when: sftp_upload_result.rc == 0

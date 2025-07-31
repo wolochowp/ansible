@@ -1,0 +1,21 @@
+---
+- name: Create backup file on MikroTik
+  community.routeros.command:
+    commands:
+      - >-
+        {% if backup_format == 'backup' %}
+        /system/backup/save
+        {% if encrypt_pass is defined %}
+        password={{ encrypt_pass }}
+        encryption=aes-sha256
+        {% endif %}
+        name={{ backup_filename }}
+        {% else %}
+        /export file={{ backup_filename }}
+        {% endif %}
+  register: backup_result
+
+- name: Confirm backup creation
+  ansible.builtin.debug:
+    msg: "Backup file {{ backup_full_filename }} created on MikroTik."
+  when: backup_result is defined and not backup_result.failed

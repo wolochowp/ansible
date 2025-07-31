@@ -1,0 +1,21 @@
+---
+- name: Upload backup from MikroTik to remote server via SFTP
+  routeros_command:
+    commands:
+      - >-
+        /tool fetch upload=yes mode=sftp ascii=no
+        src-path="{{ backup_full_filename }}"
+        dst-path="{{ remote_backup_path }}/{{ backup_full_filename }}"
+        address={{ remote_backup_host }}
+        port={{ remote_backup_port }}
+        user={{ remote_backup_user }}
+        {% if remote_backup_password is defined %}
+        password={{ remote_backup_password }}
+        {% endif %}
+  register: direct_upload_result
+  notify: Clean up backup file on MikroTik
+
+- name: Report direct upload success
+  ansible.builtin.debug:
+    msg: "Backup uploaded from MikroTik to {{ remote_backup_host }} via SFTP."
+  when: direct_upload_result is defined and not direct_upload_result.failed

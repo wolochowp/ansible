@@ -1,0 +1,15 @@
+- name: Generate timestamp for backup
+  ansible.builtin.set_fact:
+    backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+- name: Define base backup filename
+  ansible.builtin.set_fact:
+    backup_filename: "{{ inventory_hostname }}.{{ backup_timestamp }}"
+
+- name: Set backup extension
+  ansible.builtin.set_fact:
+    backup_extension: "{{ 'backup' if backup_format == 'backup' else 'rsc' }}"
+
+- name: Compose full backup filename
+  ansible.builtin.set_fact:
+    backup_full_filename: "{{ backup_filename }}.{{ backup_extension }}"

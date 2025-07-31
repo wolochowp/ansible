@@ -1,0 +1,18 @@
+---
+- name: Validate required variables
+  ansible.builtin.fail:
+    msg: "You must define remote_backup_user and remote_backup_host."
+  when: remote_backup_user is not defined or remote_backup_host is not defined
+
+- name: Ensure sshpass is available if using password-based authentication
+  ansible.builtin.stat:
+    path: /usr/bin/sshpass
+  register: sshpass_check
+  delegate_to: localhost
+  run_once: true
+  when: remote_backup_password is defined
+
+- name: Fail if sshpass is required but not found
+  ansible.builtin.fail:
+    msg: "'sshpass' must be installed on the Ansible controller for password auth."
+  when: remote_backup_password is defined and not sshpass_check.stat.exists

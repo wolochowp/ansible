@@ -42,4 +42,4 @@ remote_backup_port: 22
 #########################################################
 
 # Temporary directory on the Ansible controller to store the backup
-non_direct_transfer_tmp_path: "/tmp"
+indirect_transfer_tmp_path: "/tmp"

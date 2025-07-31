@@ -59,7 +59,7 @@ Most variables have sane defaults defined in `defaults/main.yml`. Only these are
 | `remote_backup_path`    | Remote directory to save backup files     | _must be defined_  |
 | `remote_backup_port`    | Remote SFTP server port                    | `22`               |
 | `remote_backup_password`| Optional password for SFTP (sshpass used) | `undefined`        |
-| `non_direct_transfer_tmp_path` | Temporary directory on Ansible controller | `/tmp`        |
+| `indirect_transfer_tmp_path` | Temporary directory on Ansible controller | `/tmp`        |
 | `encrypt_pass`          | Optional encryption password for `.backup` format | `undefined` |
 
 ---
