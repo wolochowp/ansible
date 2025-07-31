@@ -10,6 +10,8 @@ This role automates the backup of MikroTik RouterOS devices (tested on RouterOS 
 
 It supports two backup transfer modes.
 
+---
+
 ### 🔁 Transfer Modes
 
 #### 1. **Direct Transfer** (`direct_transfer: true`)
@@ -19,7 +21,7 @@ It supports two backup transfer modes.
   - MikroTik has direct access to the remote SFTP server.
   - You want to avoid storing backups temporarily on the Ansible controller.
 - ✅ Advantage: More efficient in environments where MikroTik has network access to the destination.
-- 🔒 Supports password or key-based SFTP auth.
+- 🔒 Supports password or key-based SFTP authentication.
 
 #### 2. **Indirect Transfer** (`direct_transfer: false`)
 
@@ -30,37 +32,33 @@ It supports two backup transfer modes.
   - You want central control or post-processing on the Ansible host.
 - ✅ Advantage: More control and flexibility, even when MikroTik lacks outbound access.
 
-Password-based or key-based authentication for SFTP is supported, with key-based as the default method.
-
 ---
 
 ## ✅ Requirements
 
 - MikroTik RouterOS (tested on 7.19.3)
-- Ansible 2.9+ with `community.routeros` collection installed
+- Ansible 2.9+ with `community.routeros` and `ansible.netcommon` collections
 - SSH connectivity configured using:
   - `ansible_connection=network_cli`
   - `ansible_network_os=routeros`
-- Python packages for SSH on the controller (e.g., `paramiko` or `ansible-pylibssh`)
-- `sshpass` installed on the Ansible controller if password-based SFTP authentication is used
+- Python packages for SSH (e.g., `paramiko` or `ansible-pylibssh`)
+- `sshpass` (required for password-based SFTP from controller)
 
 ---
 
 ## 📝 Role Variables
 
-Most variables have sane defaults defined in `defaults/main.yml`. Only these are mandatory or typically set in inventory or extra vars:
-
-| Variable                | Description                              | Default            |
-|-------------------------|------------------------------------------|--------------------|
-| `backup_format`         | Backup file format: `backup` or `rsc`    | `backup`           |
-| `direct_transfer`       | Whether MikroTik sends backup directly   | `false`            |
-| `remote_backup_host`    | Remote SFTP server hostname/IP            | _must be defined_  |
-| `remote_backup_user`    | Remote SFTP username                       | _must be defined_  |
-| `remote_backup_path`    | Remote directory to save backup files     | _must be defined_  |
-| `remote_backup_port`    | Remote SFTP server port                    | `22`               |
-| `remote_backup_password`| Optional password for SFTP (sshpass used) | `undefined`        |
-| `indirect_transfer_tmp_path` | Temporary directory on Ansible controller | `/tmp`        |
-| `encrypt_pass`          | Optional encryption password for `.backup` format | `undefined` |
+| Variable                      | Description                                              | Default        |
+|-------------------------------|----------------------------------------------------------|----------------|
+| `backup_format`               | Backup format: `backup` or `rsc`                         | `backup`       |
+| `direct_transfer`             | Whether MikroTik transfers directly                      | `false`        |
+| `remote_backup_host`          | IP/FQDN of SFTP server                                   | _required_     |
+| `remote_backup_user`          | Username for SFTP upload                                 | _required_     |
+| `remote_backup_path`          | Destination directory on SFTP server                     | _required_     |
+| `remote_backup_port`          | Port on the SFTP server                                  | `22`           |
+| `remote_backup_password`      | Optional SFTP password (used by `sshpass` if defined)    | `undefined`    |
+| `indirect_transfer_tmp_path`  | Temporary path on controller for indirect backup         | `/tmp`         |
+| `encrypt_pass`                | Optional password to encrypt `.backup` files             | `undefined`    |
 
 ---
 
@@ -97,7 +95,28 @@ direct_transfer=false
         remote_backup_password: "{{ vault_sftp_password }}"  # Optional if using SSH key
         encrypt_pass: "{{ vault_backup_encrypt_pass }}"       # Optional encryption for .backup
 ```
-## Handlers
+
+## 🔧 Role Tasks Overview
+The role runs the following tasks:
+
+validate.yml
+Checks required variables and system prerequisites.
+
+set_backup_facts.yml
+Prepares backup filename, extension, and timestamp.
+
+create_backup.yml
+Generates either .backup or .rsc file on MikroTik using /system/backup/save or /export.
+
+transfer_direct.yml
+MikroTik uploads backup to the remote SFTP server using /tool fetch.
+
+transfer_indirect.yml
+Backup is fetched by Ansible controller and then uploaded to SFTP via sftp and optionally sshpass.
+
+---
+
+## 🛎️ Handlers
 
 This role provides the following handlers:
 
@@ -117,8 +136,9 @@ This role is distributed under the MIT-0 License, which means it is free to use,
 
 ## 🧑‍💻 Author Information
 
-Paweł Wołochow
-Email: wolochowp@gmail.com
+**Paweł Wołochow**  
+Email: [wolochowp@gmail.com](mailto:wolochowp@gmail.com)  
+GitHub: [wolochowp](https://github.com/wolochowp)
 
 ---
 
