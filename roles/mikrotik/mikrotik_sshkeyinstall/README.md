@@ -59,13 +59,13 @@ mikrotik_ssh_users:
 
 The role is split into modular task files for clarity and maintainability:
 
-- `verify_pubkeys.yml`: Validates existence and format of public key files
-- `fetch_mikrotik_users.yml`: Fetches current user list from MikroTik
-- `verify_mikrotik_users.yml`: Verifies requested users against MikroTik
-- `setup_upload_list.yml`: Builds final list of valid users+keys
-- `flush_ssh_pubkeys.yml`: Removes existing keys (if enabled)
-- `upload_pubkeys.yml`: Uploads `.pub` files via SSH
-- `import_pubkeys.yml`: Imports uploaded keys into RouterOS
+- `verify_pubkeys.yml`: Validates existence and format of public key files.
+- `fetch_mikrotik_users.yml`: Fetches current user list from MikroTik.
+- `verify_mikrotik_users.yml`: Verifies requested users against MikroTik.
+- `setup_upload_list.yml`: Builds final list of valid users+keys.
+- `flush_ssh_pubkeys.yml`: Removes existing keys (if enabled).
+- `upload_pubkeys.yml`: Uploads `.pub` files via SSH.
+- `import_pubkeys.yml`: Imports uploaded keys into RouterOS.
 
 ---
 
