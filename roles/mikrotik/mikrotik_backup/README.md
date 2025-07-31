@@ -96,23 +96,14 @@ direct_transfer=false
         encrypt_pass: "{{ vault_backup_encrypt_pass }}"       # Optional encryption for .backup
 ```
 
-## 🔧 Role Tasks Overview
+## 📁 Role Structure (Modular Tasks)
 The role runs the following tasks:
 
-validate.yml
-Checks required variables and system prerequisites.
-
-set_backup_facts.yml
-Prepares backup filename, extension, and timestamp.
-
-create_backup.yml
-Generates either .backup or .rsc file on MikroTik using /system/backup/save or /export.
-
-transfer_direct.yml
-MikroTik uploads backup to the remote SFTP server using /tool fetch.
-
-transfer_indirect.yml
-Backup is fetched by Ansible controller and then uploaded to SFTP via sftp and optionally sshpass.
+- `validate.yml`: Checks required variables and system prerequisites.
+- `set_backup_facts.yml`: Prepares backup filename, extension, and timestamp.
+- `create_backup.yml`: Generates either .backup or .rsc file on MikroTik using /system/backup/save or /export.
+- `transfer_direct.yml`: MikroTik uploads backup to the remote SFTP server using /tool fetch.
+- `transfer_indirect.yml`: Backup is fetched by Ansible controller and then uploaded to SFTP via sftp and optionally sshpass.
 
 ---
 
