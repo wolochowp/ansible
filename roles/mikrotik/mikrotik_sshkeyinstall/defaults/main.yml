@@ -1,6 +1,6 @@
 #SPDX-License-Identifier: MIT-0
 ---
-allow_flushing_pubkeys: true
+allow_flushing_pubkeys: false
 verify_users_exist: true
 fail_on_invalid_user: false
 verify_pubkeys: true
