@@ -1,3 +1,17 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
-# defaults file for hashivault_deploy
+# Vault installation & system settings
+hashivault_deploy_user: vault
+hashivault_deploy_group: vault
+hashivault_deploy_version: latest        # or specify exact version e.g. 1.13.0
+hashivault_deploy_config_dir: /etc/vault.d
+hashivault_deploy_data_dir: /opt/vault/data
+hashivault_deploy_bind_address: "0.0.0.0:8200"
+
+# Vault backend storage type
+hashivault_deploy_backend_type: file
+hashivault_deploy_backend_config: {}  # dict with backend-specific config
+
+# Vault seal type (auto, aws, gcp, hsm, transit, or "none" for no seal)
+hashivault_deploy_seal_type: auto
+hashivault_deploy_seal_config: {}     # dict with seal-specific config
