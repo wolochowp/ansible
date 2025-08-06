@@ -1,0 +1,43 @@
+[Unit]
+Description=HashiCorp Vault - A tool for managing secrets
+Documentation=https://www.vaultproject.io/docs/
+Requires=network-online.target
+ConditionFileNotEmpty={{ hashivault_deploy_config_dir }}/vault.hcl
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+
+[Service]
+Type=notify
+User={{ hashivault_deploy_user }}
+Group={{ hashivault_deploy_group }}
+EnvironmentFile={{ hashivault_deploy_config_dir }}/vault.env
+ExecStart=/usr/bin/vault server -config={{ hashivault_deploy_config_dir }}/vault.hcl
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536 # Increase the number of open files
+LimitMEMLOCK=infinity # 	Vault needs to lock memory (no secrets on disk swap)
+LimitCORE=0 # Disable core dumps
+
+# Security
+ProtectSystem=strict    # Make /usr, /boot, /etc read-only
+ProtectHome=read-only # Make home directories read-only
+PrivateTmp=true # Use private /tmp and /var/tmp directories
+PrivateDevices=true # Isolate the service from devices
+ProtectKernelModules=true # Prevent loading kernel modules
+ProtectControlGroups=true # Prevent access to control groups
+ProtectKernelTunables=true # Prevent modification of kernel parameters
+ProtectHostname=true # Prevent changing the hostname
+ProtectProc=invisible # Hide /proc from the service
+SecureBits=keep-caps # Keep capabilities across execve
+NoNewPrivileges=true # Prevent gaining new privileges
+AmbientCapabilities={{ hashivault_deploy_capabilities | join(' ') }} # Ambient capabilities for the service
+CapabilityBoundingSet={{ hashivault_deploy_capabilities | join(' ') }} # Limit capabilities to those specified
+
+
+[Install]
+WantedBy=multi-user.target

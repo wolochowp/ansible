@@ -15,3 +15,10 @@ hashivault_deploy_backend_config: {}  # dict with backend-specific config
 # Vault seal type (auto, aws, gcp, hsm, transit, or "none" for no seal)
 hashivault_deploy_seal_type: auto
 hashivault_deploy_seal_config: {}     # dict with seal-specific config
+
+
+# Security
+hashivault_deploy_capabilities:
+ - "cap_ipc_lock=+ep"
+ - "cap_syslog=+ep"
+  # to allow Vault to lock memory and access syslog via dmesg

@@ -1,0 +1,68 @@
+---
+- name: Fail if OS family is unsupported by HashiCorp
+  ansible.builtin.fail:
+    msg: "Unsupported OS family: {{ ansible_os_family }}. Only Debian and RedHat families are supported."
+  when: ansible_os_family not in ['Debian', 'RedHat']
+
+- name: Add HashiCorp GPG key (Debian family)
+  ansible.builtin.apt_key:
+    url: https://apt.releases.hashicorp.com/gpg
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_lsb.codename }} main"
+    state: present
+    filename: hashicorp
+  when: ansible_os_family == 'Debian'
+
+- name: Add HashiCorp YUM repository
+  ansible.builtin.yum_repository:
+    name: hashicorp
+    description: "HashiCorp Stable - $basearch"
+    baseurl: https://rpm.releases.hashicorp.com/RHEL/{{ ansible_distribution_major_version }}/$basearch/stable
+    gpgkey: https://rpm.releases.hashicorp.com/gpg
+    gpgcheck: true
+    enabled: true
+  when: ansible_os_family == 'RedHat'
+
+- name: Update apt cache (Debian Family)
+  ansible.builtin.apt:
+    update_cache: true
+  when: ansible_os_family == 'Debian'
+
+- name: Install Vault (Debian Family)
+  ansible.builtin.apt:
+    name: vault
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Install Vault (RedHat Family)
+  ansible.builtin.dnf:
+    name: vault
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Create Vault system user
+  ansible.builtin.user:
+    name: "{{ hashivault_deploy_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Ensure Vault config directory exists
+  ansible.builtin.file:
+    path: "{{ hashivault_deploy_config_dir }}"
+    state: directory
+    owner: "{{ hashivault_deploy_user }}"
+    group: "{{ hashivault_deploy_group }}"
+    mode: '0750'
+
+- name: Ensure Vault data directory exists
+  ansible.builtin.file:
+    path: "{{ hashivault_deploy_data_dir }}"
+    state: directory
+    owner: "{{ hashivault_deploy_user }}"
+    group: "{{ hashivault_deploy_group }}"
+    mode: '0700'
