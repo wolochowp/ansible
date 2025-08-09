@@ -1,9 +1,27 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # tasks file for hashivault_deploy
-- name: Install required packages for Vault
+- name: Validate required variables
+  ansible.builtin.import_tasks:
+    file: validate_vars.yml
+- name: Install required dependencies
   ansible.builtin.import_tasks:
     file: install_deps.yml
 - name: Install Vault
   ansible.builtin.import_tasks:
     file: install_vault.yml
+- name: Deploy Vault configuration
+  ansible.builtin.import_tasks:
+    file: deploy_config.yml
+- name: Deploy Vaults TLS certificates
+  ansible.builtin.import_tasks:
+    file: deploy_tls.yml
+- name: Deploy Vault systemd service
+  ansible.builtin.import_tasks:
+    file: deploy_systemd.yml
+- name: Bootstrap Vault cluster
+  ansible.builtin.import_tasks:
+    file: bootstrap_cluster.yml
+- name: Unseal Vault
+  ansible.builtin.import_tasks:
+    file: unseal_vault.yml

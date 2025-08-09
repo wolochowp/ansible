@@ -66,3 +66,13 @@
     owner: "{{ hashivault_deploy_user }}"
     group: "{{ hashivault_deploy_group }}"
     mode: '0700'
+
+- name: Set VAULT_ADDR in /etc/environment
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: '^VAULT_ADDR='
+    line: >-
+      VAULT_ADDR={{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_default_ipv4.address }}:8200
+    create: true
+    state: present
+  notify: Reload environment

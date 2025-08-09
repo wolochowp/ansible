@@ -8,9 +8,9 @@
     mode: '0644'
   notify: Reload systemd
 
-#- name: Enable and start Vault service
-#  ansible.builtin.systemd:
-#    name: "{{ hashivault_deploy_systemd_service_name }}"
-#    enabled: true
-#    state: started
-#    daemon_reload: true
+- name: Enable and start Vault service
+  ansible.builtin.systemd:
+    name: "{{ hashivault_deploy_systemd_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

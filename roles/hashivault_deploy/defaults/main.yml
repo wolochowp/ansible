@@ -23,8 +23,8 @@ hashivault_deploy_storage_config:
 
 hashivault_deploy_seal_type: "none"
 hashivault_deploy_seal_config:
-  region: "eu-central-1"
-  kms_key_id: "arn:aws:kms:..."
+#  region: "eu-central-1"
+#  kms_key_id: "arn:aws:kms:..."
   # credentials: prefer instance profile or environment variables
 
 
@@ -36,7 +36,10 @@ hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
 
 hashivault_deploy_telemetry: {}
 hashivault_deploy_capabilities:
-  - "cap_ipc_lock=+ep"
-  - "cap_syslog=+ep"
+  - cap_ipc_lock=+ep
+  - cap_syslog=+ep
 
-hashivault_deploy_bootstrap: true
+hashivault_deploy_bootstrap_enabled: true
+# Shamir key management settings if used
+hashivault_deploy_shamir_key_shares: 5
+hashivault_deploy_shamir_key_threshold: 3

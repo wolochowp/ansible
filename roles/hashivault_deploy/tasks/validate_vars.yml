@@ -6,12 +6,12 @@
       - hashivault_deploy_user != ''
     fail_msg: "Variable 'hashivault_deploy_user' must be defined and not empty"
 
-- name: Ensure hashivault_deploy_backend_type is set
+- name: Ensure hashivault_deploy_storage_type is set
   ansible.builtin.assert:
     that:
-      - hashivault_deploy_backend_type is defined
-      - hashivault_deploy_backend_type != ''
-    fail_msg: "Variable 'hashivault_deploy_backend_type' must be defined and not empty in defaults/main.yml"
+      - hashivault_deploy_storage_type is defined
+      - hashivault_deploy_storage_type != ''
+    fail_msg: "Variable 'hashivault_deploy_storage_type' must be defined and not empty in defaults/main.yml"
 
 - name: Ensure hashivault_deploy_seal_type is set
   ansible.builtin.assert:
