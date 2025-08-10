@@ -22,6 +22,6 @@
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
     file: bootstrap_cluster.yml
-- name: Unseal Vault
-  ansible.builtin.import_tasks:
-    file: unseal_vault.yml
+#- name: Unseal Vault
+#  ansible.builtin.import_tasks:
+#    file: unseal_vault.yml

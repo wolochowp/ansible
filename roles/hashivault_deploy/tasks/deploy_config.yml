@@ -1,0 +1,9 @@
+---
+- name: Render Vault configuration file
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: "{{ hashivault_deploy_config_dir }}/vault.hcl"
+    owner: "{{ hashivault_deploy_user }}"
+    group: "{{ hashivault_deploy_group }}"
+    mode: '0640'
+  notify: Restart Vault

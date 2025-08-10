@@ -1,0 +1,139 @@
+---
+
+- name: Check if Vault is already initialized
+  ansible.builtin.command: vault status -format=json
+  register: vault_status_raw
+  failed_when: false
+  changed_when: false
+  environment:
+    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+
+- name: Debug the raw output
+  ansible.builtin.debug:
+    var: vault_status_raw.stdout
+
+- name: Set fact with initialization status
+  ansible.builtin.set_fact:
+    hashivault_deploy_initialized: "{{ (vault_status_raw.stdout | from_json).initialized | default(true) }}"
+
+
+- name: Gather list of initialized hosts
+  delegate_to: localhost
+  run_once: true
+  set_fact:
+    initialized_hosts: >-
+      {{
+        play_hosts
+        | map('extract', hostvars, 'hashivault_deploy_initialized')
+        | zip(play_hosts)
+        | selectattr('0', 'equalto', true)
+        | map('last')
+        | list
+      }}
+- name: Set bootstrap allowed flag
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.set_fact:
+    hashivault_deploy_bootstrap_allowed: "{{ initialized_hosts | length == 0 }}"
+
+- name: Show skipping message if cluster already initialized
+  delegate_to: localhost
+  run_once: true
+  debug:
+    msg: >
+      Vault bootstrap skipped because already initialized on hosts:
+      {{ initialized_hosts | join(', ') }}
+  when: not hashivault_deploy_bootstrap_allowed
+
+
+# Initialize Vault only on first node
+- name: Initialize Vault (Shamir) on first node if not initialized and seal is 'none'
+  ansible.builtin.command: >
+    vault operator init
+    -key-shares={{ hashivault_deploy_shamir_key_shares }}
+    -key-threshold={{ hashivault_deploy_shamir_key_threshold }}
+    -format=json
+  register: hashivault_deploy_vault_init
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_bootstrap_allowed
+    - inventory_hostname == play_hosts[0]
+    - not hashivault_deploy_initialized
+    - hashivault_deploy_seal_type == 'none'
+  changed_when: hashivault_deploy_vault_init is changed
+  failed_when: hashivault_deploy_vault_init.rc != 0
+  environment:
+    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+  run_once: true
+
+- name: Set leader Vault cluster address fact (Raft port)
+  ansible.builtin.set_fact:
+    hashivault_deploy_leader_raft_addr: "http://{{ hostvars[play_hosts[0]].ansible_host }}:8200"
+  delegate_to: localhost
+  run_once: true
+
+
+- name: Save unseal keys and root token to encrypted file on controller
+  ansible.builtin.copy:
+    dest: "{{ hashivault_deploy_secret }}"
+    content: "{{ hashivault_deploy_vault_init.stdout }}"
+    mode: '0600'
+  delegate_to: localhost
+  become: true
+  run_once: true
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_bootstrap_allowed
+    - inventory_hostname == play_hosts[0]
+    - not hashivault_deploy_initialized
+    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_vault_init is defined
+  no_log: true
+
+- name: Check if Vault leader is already unsealed
+  ansible.builtin.command: vault status -format=json
+  register: vault_status_raw2
+  failed_when: false
+  changed_when: false
+  environment:
+    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+
+- name: Debug the raw output
+  ansible.builtin.debug:
+    var: vault_status_raw2.stdout
+
+- name: Set fact with initialization status
+  ansible.builtin.set_fact:
+    hashivault_deploy_sealed: "{{ (vault_status_raw2.stdout | from_json).sealed | default(false) }}"
+
+
+- name: Unseal leader Vault node
+  ansible.builtin.include_tasks: unseal_vault.yml
+  when:
+    - inventory_hostname == play_hosts[0]
+    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_sealed
+
+
+- name: Debug vault addr on leader host
+  ansible.builtin.debug:
+    var: hashivault_deploy_leader_raft_addr
+# Join Raft cluster on other nodes
+- name: Join other nodes to Raft cluster
+  environment:
+    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+  ansible.builtin.command: >
+    vault operator raft join {{ hashivault_deploy_leader_raft_addr }}
+  when:
+    - inventory_hostname != play_hosts[0]
+    - hashivault_deploy_storage_type == 'raft'
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Unseal Other Vault nodes
+  ansible.builtin.include_tasks: unseal_vault.yml
+  when:
+    - inventory_hostname != play_hosts[0]
+    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_sealed

@@ -12,8 +12,10 @@ hashivault_deploy_data_dir: /opt/vault/data
 hashivault_deploy_ui_enabled: true  # set to false to disable the Vault UI
 hashivault_deploy_disable_mlock: false    # prefer false; allow mlock
 hashivault_deploy_bind_address: "0.0.0.0:8200"
-hashivault_deploy_api_addr: "https://vault.example.com:8200"
-hashivault_deploy_cluster_addr: "https://{{ ansible_default_ipv4.address }}:8201"
+hashivault_deploy_api_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://vault.example.com:8200"
+
+hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200"
+hashivault_deploy_cluster_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8201"
 
 hashivault_deploy_storage_type: raft
 hashivault_deploy_storage_config:
@@ -43,3 +45,7 @@ hashivault_deploy_bootstrap_enabled: true
 # Shamir key management settings if used
 hashivault_deploy_shamir_key_shares: 5
 hashivault_deploy_shamir_key_threshold: 3
+
+hashivault_deploy_secrets_path: "/home/wolkov/"
+hashivault_deploy_secrets_filename: "vault-init-keys.json"
+hashivault_deploy_secret: "{{ hashivault_deploy_secrets_path ~ hashivault_deploy_secrets_filename }}"

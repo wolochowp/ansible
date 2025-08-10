@@ -19,3 +19,13 @@
       - hashivault_deploy_seal_type is defined
       - hashivault_deploy_seal_type != ''
     fail_msg: "Variable 'hashivault_deploy_seal_type' must be defined and not empty in defaults/main.yml"
+
+# Build list of Vault nodes participating in the current play run
+- name: Build Vault cluster node list from run hosts
+  ansible.builtin.set_fact:
+    hashivault_deploy_cluster_nodes: "{{ ansible_play_hosts | list }}"
+
+
+- name: Set vault addr fact for each host
+  ansible.builtin.set_fact:
+    hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200"

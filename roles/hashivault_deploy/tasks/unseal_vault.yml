@@ -1,0 +1,44 @@
+#- name: Unseal Vault with stored keys
+#  when:
+#    - hashivault_deploy_seal_type == 'none'
+#    - hashivault_deploy_bootstrap
+#  block:
+#    - name: Read unseal keys file
+#      ansible.builtin.slurp:
+#        src: /root/vault-init-keys.json
+#      register: hashivault_deploy_unseal_file
+
+#    - name: Set unseal keys fact
+#      ansible.builtin.set_fact:
+#        hashivault_deploy_unseal_data: "{{ hashivault_deploy_unseal_file.content | b64decode | from_json }}"
+
+#    - name: Unseal Vault with quorum keys
+#      ansible.builtin.command: vault operator unseal {{ item }}
+#      loop: "{{ hashivault_deploy_unseal_data.unseal_keys_b64[:hashivault_deploy_shamir_key_threshold] }}"
+#      register: hashivault_deploy_unseal_results
+#      retries: 3
+#      delay: 5
+#      until: hashivault_deploy_unseal_results is succeeded
+#      environment:
+#        VAULT_ADDR: "{{ 'https://' if hashivault_deploy_tls_enabled else 'http://' }}{{ ansible_fqdn }}:8200"
+
+
+
+
+- name: Load unseal keys from controller file
+  ansible.builtin.set_fact:
+    hashivault_deploy_unseal_data: "{{ lookup('file', hashivault_deploy_secret) | from_json }}"
+  delegate_to: localhost
+  run_once: true
+  become: true
+
+- name: Unseal Vault nodes
+  ansible.builtin.command: vault operator unseal {{ item }}
+  loop: "{{ hashivault_deploy_unseal_data.unseal_keys_b64[:hashivault_deploy_shamir_key_threshold] }}"
+  environment:
+    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+  retries: 5
+  delay: 5
+  until: result is succeeded
+  register: result
+  when: "'hashivault_deploy_unseal_data' in vars"
