@@ -7,17 +7,33 @@ hashivault_deploy_group: vault
 hashivault_deploy_version: latest        # or specify exact version e.g. 1.13.0
 hashivault_deploy_config_dir: /etc/vault.d
 hashivault_deploy_data_dir: /opt/vault/data
+hashivault_deploy_cluster_name: "cluster1"
+hashivault_deploy_vault_port: 8200
+hashivault_deploy_vault_cluster_port: 8201
+
+hashivault_deploy_configure_firewall: true
+hashivault_deploy_bootstrap_enabled: true
+
+
+
+# TLS settings
+hashivault_deploy_tls_enabled: false
+hashivault_deploy_tls_wildcard: false
+hashivault_deploy_tls_wildcard_name: false
+hashivault_deploy_tls_cert_file: "/etc/vault/tls/vault.pem"
+hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
+
 
 # Vault.hcl settings
-hashivault_deploy_ui_enabled: true  # set to false to disable the Vault UI
-hashivault_deploy_disable_mlock: false    # prefer false; allow mlock
-hashivault_deploy_bind_address: "0.0.0.0:8200"
-hashivault_deploy_api_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://vault.example.com:8200"
+hashivault_deploy_ui_enabled: true
+hashivault_deploy_disable_mlock: false
+hashivault_deploy_bind_address: "0.0.0.0:{{ hashivault_deploy_vault_port }}"
+hashivault_deploy_api_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://vault.example.com:{{ hashivault_deploy_vault_port }}"
 
-hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200"
-hashivault_deploy_cluster_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8201"
+hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:{{ hashivault_deploy_vault_port }}"
+hashivault_deploy_cluster_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:{{ hashivault_deploy_vault_cluster_port }}"
 
-hashivault_deploy_storage_type: raft
+hashivault_deploy_storage_type: file
 hashivault_deploy_storage_config:
   path: "/opt/vault/data"
   node_id: "{{ inventory_hostname }}"
@@ -29,23 +45,16 @@ hashivault_deploy_seal_config:
 #  kms_key_id: "arn:aws:kms:..."
   # credentials: prefer instance profile or environment variables
 
-
-hashivault_deploy_tls_enabled: false
-hashivault_deploy_tls_wildcard: false
-hashivault_deploy_tls_wildcard_name: false
-hashivault_deploy_tls_cert_file: "/etc/vault/tls/vault.pem"
-hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
-
 hashivault_deploy_telemetry: {}
 hashivault_deploy_capabilities:
   - cap_ipc_lock=+ep
   - cap_syslog=+ep
 
-hashivault_deploy_bootstrap_enabled: true
+
 # Shamir key management settings if used
 hashivault_deploy_shamir_key_shares: 5
 hashivault_deploy_shamir_key_threshold: 3
 
-hashivault_deploy_secrets_path: "/home/wolkov/"
-hashivault_deploy_secrets_filename: "vault-init-keys.json"
-hashivault_deploy_secret: "{{ hashivault_deploy_secrets_path ~ hashivault_deploy_secrets_filename }}"
+hashivault_deploy_token_save_path: "/home/wolkov/"
+hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
+hashivault_deploy_token: "{{ hashivault_deploy_token_save_path ~ hashivault_deploy_token_save_filename }}"

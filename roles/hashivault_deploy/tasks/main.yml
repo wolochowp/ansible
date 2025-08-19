@@ -4,24 +4,56 @@
 - name: Validate required variables
   ansible.builtin.import_tasks:
     file: validate_vars.yml
+
 - name: Install required dependencies
   ansible.builtin.import_tasks:
     file: install_deps.yml
+
+- name: Configure firewall on Vault nodes to allow Vault traffic
+  ansible.builtin.import_tasks:
+    file: configure_firewall.yml
+  when: hashivault_deploy_configure_firewall
+
 - name: Install Vault
   ansible.builtin.import_tasks:
     file: install_vault.yml
+
 - name: Deploy Vault configuration
   ansible.builtin.import_tasks:
     file: deploy_config.yml
+
 - name: Deploy Vaults TLS certificates
   ansible.builtin.import_tasks:
     file: deploy_tls.yml
+  when:
+    - hashivault_deploy_tls_enabled
+
 - name: Deploy Vault systemd service
   ansible.builtin.import_tasks:
     file: deploy_systemd.yml
+
+- name: Check Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_init.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
     file: bootstrap_cluster.yml
-#- name: Unseal Vault
-#  ansible.builtin.import_tasks:
-#    file: unseal_vault.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_storage_type == 'raft'
+    - hashivault_deploy_seal_type == 'none'
+- name: Check Vault seal status
+  ansible.builtin.import_tasks:
+    file: check_vault_seal.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_seal_type == 'none'
+- name: Unseal Vault
+  ansible.builtin.import_tasks:
+    file: unseal_vault.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_sealed

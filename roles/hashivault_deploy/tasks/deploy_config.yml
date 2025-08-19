@@ -6,4 +6,4 @@
     owner: "{{ hashivault_deploy_user }}"
     group: "{{ hashivault_deploy_group }}"
     mode: '0640'
-  notify: Restart Vault
+  register: "hashivault_deploy_vault_hcl"

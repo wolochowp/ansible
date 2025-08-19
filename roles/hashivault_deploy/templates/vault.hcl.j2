@@ -8,7 +8,9 @@ disable_mlock = true
 {% else %}
 disable_mlock = false
 {% endif %}
-
+{% if hashivault_deploy_cluster_name %}
+cluster_name = "{{ hashivault_deploy_cluster_name }}"
+{% endif %}
 # === API & cluster addresses ===
 {% if hashivault_deploy_api_addr %}
 api_addr = "{{ hashivault_deploy_api_addr }}"

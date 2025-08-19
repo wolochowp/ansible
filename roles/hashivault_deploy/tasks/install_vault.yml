@@ -75,4 +75,4 @@
       VAULT_ADDR={{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200
     create: true
     state: present
-  notify: Reload environment
+    mode: '0644'

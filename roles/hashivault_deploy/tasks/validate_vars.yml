@@ -5,6 +5,42 @@
       - hashivault_deploy_user is defined
       - hashivault_deploy_user != ''
     fail_msg: "Variable 'hashivault_deploy_user' must be defined and not empty"
+- name: Ensure hashivault_deploy_group is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_group is defined
+      - hashivault_deploy_group != ''
+    fail_msg: "Variable 'hashivault_deploy_group' must be defined and not empty"
+- name: Ensure hashivault_deploy_vault_port is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_vault_port is defined
+      - hashivault_deploy_vault_port != ''
+    fail_msg: "Variable 'hashivault_deploy_vault_port' must be defined and not empty"
+- name: Ensure hashivault_deploy_vault_cluster_port is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_vault_cluster_port is defined
+      - hashivault_deploy_vault_cluster_port != ''
+    fail_msg: "Variable 'hashivault_deploy_vault_cluster_port' must be defined and not empty"
+- name: Ensure hashivault_deploy_vault_addr is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_vault_addr is defined
+      - hashivault_deploy_vault_addr != ''
+    fail_msg: "Variable 'hashivault_deploy_vault_addr' must be defined and not empty"
+- name: Ensure hashivault_deploy_vault_cluster_addr is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_vault_cluster_addr is defined
+      - hashivault_deploy_vault_cluster_addr != ''
+    fail_msg: "Variable 'hashivault_deploy_vault_cluster_addr' must be defined and not empty"
+- name: Ensure hashivault_deploy_tls_enabled is set
+  ansible.builtin.assert:
+    that:
+      - hashivault_deploy_tls_enabled is defined
+      - hashivault_deploy_tls_enabled is boolean
+    fail_msg: "Variable 'hashivault_deploy_tls_enabled' must be defined and be a boolean"
 
 - name: Ensure hashivault_deploy_storage_type is set
   ansible.builtin.assert:
@@ -20,12 +56,58 @@
       - hashivault_deploy_seal_type != ''
     fail_msg: "Variable 'hashivault_deploy_seal_type' must be defined and not empty in defaults/main.yml"
 
-# Build list of Vault nodes participating in the current play run
-- name: Build Vault cluster node list from run hosts
-  ansible.builtin.set_fact:
-    hashivault_deploy_cluster_nodes: "{{ ansible_play_hosts | list }}"
-
-
 - name: Set vault addr fact for each host
   ansible.builtin.set_fact:
     hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200"
+
+# --------------------------------------------------------------------------
+# Ensure file storage is not used with multiple hosts
+# --------------------------------------------------------------------------
+- name: Fail if file storage is selected with multiple hosts
+  run_once: true
+  ansible.builtin.fail:
+    msg: >
+      "Vault file storage cannot be used with multiple nodes.
+      Selected storage type: {{ hashivault_deploy_storage_type }}.
+      Number of hosts in play: {{ play_hosts | length }}."
+  when:
+    - hashivault_deploy_storage_type == "file"
+    - play_hosts | length > 1
+
+# --------------------------------------------------------------------------
+# Ensure raft storage is used with multiple hosts
+# --------------------------------------------------------------------------
+- name: Fail if raft storage is selected with single host
+  run_once: true
+  ansible.builtin.fail:
+    msg: >
+      "Vault file storage cannot be used with multiple nodes.
+      Selected storage type: {{ hashivault_deploy_storage_type }}.
+      Number of hosts in play: {{ play_hosts | length }}."
+  when:
+    - hashivault_deploy_storage_type == "file"
+    - play_hosts | length < 1
+
+
+# --------------------------------------------------------------------------
+# Ensure cluster membership is consistant across all hosts in current play
+# --------------------------------------------------------------------------
+- name: Initialize cluster membership fact if not set
+  ansible.builtin.set_fact:
+    hashivault_deploy_cluster_membership: "{{ hashivault_deploy_cluster_name }}"
+  when:
+    - hashivault_deploy_cluster_membership is not defined
+    - hashivault_deploy_cluster_name is defined
+
+- name: Collect cluster memberships
+  ansible.builtin.set_fact:
+    __cluster_memberships_all: >-
+      {{ play_hosts | map('extract', hostvars, 'hashivault_deploy_cluster_membership') | list }}
+  run_once: true
+
+- name: Ensure all cluster memberships are the same
+  ansible.builtin.assert:
+    that:
+      - __cluster_memberships_all | unique | length == 1
+    fail_msg: "Cluster membership differs between hosts: {{ __cluster_memberships_all | unique }}"
+  run_once: true

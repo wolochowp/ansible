@@ -6,3 +6,4 @@ playbook.yml
 ansible.cfg
 /roles/mikrotik/mikrotik_sshkeyinstall/files/*
 .ansible/
+.vscode/
