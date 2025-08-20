@@ -5,25 +5,25 @@
       register: hashivault_deploy_unseal_file
       delegate_to: localhost
       become: true
-      no_log: true
+     # no_log: true
 
-    - name: Unseal Vault nodes via API
-      ansible.builtin.uri:
-        url: "{{ hashivault_deploy_vault_addr }}/v1/sys/unseal"
-        method: POST
-        body_format: json
-        body:
-          key: "{{ item }}"
-        return_content: true
-        status_code: 200, 204   # 204 means already unsealed
-      loop: "{{ hashivault_deploy_unseal_data.unseal_keys_b64[:hashivault_deploy_shamir_key_threshold] }}"
-      register: hashivault_deploy_unseal_result
-      retries: 5
-      delay: 5
-      until: hashivault_deploy_unseal_result.status in [200, 204]
-      changed_when: hashivault_deploy_unseal_result is succeeded
-      failed_when: hashivault_deploy_unseal_result is failed
-      no_log: true
+- name: Unseal Vault nodes via API
+  ansible.builtin.uri:
+    url: "{{ hashivault_deploy_vault_addr }}/v1/sys/unseal"
+    method: POST
+    body_format: json
+    body:
+      key: "{{ item }}"
+    return_content: true
+    status_code: 200, 204   # 204 means already unsealed
+  loop: "{{ hashivault_deploy_unseal_data.keys_base64[:hashivault_deploy_shamir_key_threshold] }}"
+  register: hashivault_deploy_unseal_result
+  retries: 5
+  delay: 5
+  until: hashivault_deploy_unseal_result.status in [200, 204]
+  changed_when: hashivault_deploy_unseal_result is succeeded
+  failed_when: hashivault_deploy_unseal_result is failed
+    #  no_log: true
   vars:
     hashivault_deploy_unseal_data: "{{ hashivault_deploy_unseal_file.content | b64decode | from_json }}"
   when: hashivault_deploy_token is file

@@ -11,7 +11,7 @@ hashivault_deploy_cluster_name: "vault-test-cluster"
 hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address|default( ansible_all_ipv4_addresses[0] ) }}"
 hashivault_deploy_vault_port: 8200
 hashivault_deploy_vault_cluster_port: 8201
-hashivault_deploy_configure_firewall: iptables
+hashivault_deploy_configure_firewall: none
 hashivault_deploy_bootstrap_enabled: true
 # =============================================================
 # TLS settings
