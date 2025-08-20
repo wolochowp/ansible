@@ -10,13 +10,11 @@
 
 
 - name: Reload systemd if vault service file changed
-  # noqa: 301
   ansible.builtin.systemd:
     daemon_reload: true
   when: hashivault_deploy_systemd_service.changed
 
 - name: Restart Vault if config or service changed
-  # noqa: 301
   ansible.builtin.systemd:
     name: "{{ hashivault_deploy_systemd_service_name }}"
     state: restarted

@@ -12,7 +12,7 @@
 - name: Configure firewall on Vault nodes to allow Vault traffic
   ansible.builtin.import_tasks:
     file: configure_firewall.yml
-  when: hashivault_deploy_configure_firewall
+  when: hashivault_deploy_configure_firewall != 'none'
 
 - name: Install Vault
   ansible.builtin.import_tasks:

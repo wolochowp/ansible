@@ -1,17 +1,4 @@
 ---
-- name: Gather list of initialized hosts
-  delegate_to: localhost
-  run_once: true
-  ansible.builtin.set_fact:
-    hashivault_deploy_initialized_hosts: >-
-      {{
-        play_hosts
-        | map('extract', hostvars, 'hashivault_deploy_initialized')
-        | zip(play_hosts)
-        | selectattr('0', 'equalto', true)
-        | map('last')
-        | list
-      }}
 - name: Set bootstrap allowed flag
   delegate_to: localhost
   run_once: true
@@ -32,26 +19,28 @@
 # Happens only once when have to bootstrap Vault Cluster(e.g. no inited vault nodes yet)
 # ==========================================================
 - name: Initialize Vault (Shamir) on first node if not initialized and seal is 'none'
-  ansible.builtin.command: >
-    vault operator init
-    -key-shares={{ hashivault_deploy_shamir_key_shares }}
-    -key-threshold={{ hashivault_deploy_shamir_key_threshold }}
-    -format=json
+  ansible.builtin.uri:
+    url: "{{ hashivault_deploy_vault_addr }}/v1/sys/init"
+    method: POST
+    body_format: json
+    body:
+      secret_shares: "{{ hashivault_deploy_shamir_key_shares }}"
+      secret_threshold: "{{ hashivault_deploy_shamir_key_threshold }}"
+    return_content: true
+    status_code: 200
   register: hashivault_deploy_vault_init
   when:
     - inventory_hostname == play_hosts[0]
     - not hashivault_deploy_initialized
     - hashivault_deploy_bootstrap_allowed
-  changed_when: hashivault_deploy_vault_init is changed
-  failed_when: hashivault_deploy_vault_init.rc != 0
-  environment:
-    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
+    - hashivault_deploy_seal_type == 'none'
   run_once: true
+  no_log: true
 
 - name: Save unseal keys and root token to file on controller
   ansible.builtin.copy:
-    dest: "{{ hashivault_deploy_secret }}"
-    content: "{{ hashivault_deploy_vault_init.stdout }}"
+    dest: "{{ hashivault_deploy_token }}"
+    content: "{{ hashivault_deploy_vault_init.content }}"
     mode: '0600'
   delegate_to: localhost
   become: true

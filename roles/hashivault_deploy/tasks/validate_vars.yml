@@ -29,12 +29,12 @@
       - hashivault_deploy_vault_addr is defined
       - hashivault_deploy_vault_addr != ''
     fail_msg: "Variable 'hashivault_deploy_vault_addr' must be defined and not empty"
-- name: Ensure hashivault_deploy_vault_cluster_addr is set
+- name: Ensure hashivault_deploy_cluster_addr is set
   ansible.builtin.assert:
     that:
-      - hashivault_deploy_vault_cluster_addr is defined
-      - hashivault_deploy_vault_cluster_addr != ''
-    fail_msg: "Variable 'hashivault_deploy_vault_cluster_addr' must be defined and not empty"
+      - hashivault_deploy_cluster_addr is defined
+      - hashivault_deploy_cluster_addr != ''
+    fail_msg: "Variable 'hashivault_deploy_cluster_addr' must be defined and not empty"
 - name: Ensure hashivault_deploy_tls_enabled is set
   ansible.builtin.assert:
     that:
@@ -58,7 +58,7 @@
 
 - name: Set vault addr fact for each host
   ansible.builtin.set_fact:
-    hashivault_deploy_vault_addr: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200"
+    hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
 
 # --------------------------------------------------------------------------
 # Ensure file storage is not used with multiple hosts
@@ -94,10 +94,8 @@
 # --------------------------------------------------------------------------
 - name: Initialize cluster membership fact if not set
   ansible.builtin.set_fact:
-    hashivault_deploy_cluster_membership: "{{ hashivault_deploy_cluster_name }}"
-  when:
-    - hashivault_deploy_cluster_membership is not defined
-    - hashivault_deploy_cluster_name is defined
+    hashivault_deploy_cluster_membership: "{{ hashivault_deploy_cluster_name | default(omit) }}"
+  when: hashivault_deploy_cluster_membership is not defined
 
 - name: Collect cluster memberships
   ansible.builtin.set_fact:
