@@ -1,0 +1,54 @@
+- name: Check if iptables rule exists for Vault cluster
+  ansible.builtin.command: >
+    iptables -C INPUT -p tcp -s {{ item.1 }} --dport {{ item.0.port }} -j ACCEPT
+  register: check_rule
+  ignore_errors: true
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "check {{ item.1 }} on port {{ item.0.port }}"
+  changed_when: false
+
+- name: Add iptables rule for Vault cluster if missing
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ item.1 }}"
+    destination_port: "{{ item.0.port }}"
+    jump: ACCEPT
+    state: present
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "add {{ item.1 }} on port {{ item.0.port }}"
+  when:
+    - check_rule is failed
+
+# ----------------- Check controller access -----------------
+- name: Check if iptables rule exists for Vault API from Ansible controller
+  ansible.builtin.command: >
+    iptables -C INPUT -p tcp -s {{ ansible_host | default(ansible_default_ipv4.address) }} --dport {{ hashivault_deploy_vault_port }} -j ACCEPT
+  register: check_controller_rule
+  ignore_errors: true
+  changed_when: false
+
+- name: Allow Vault API for Ansible controller via iptables if missing
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+    destination_port: "{{ hashivault_deploy_vault_port }}"
+    jump: ACCEPT
+    state: present
+  when: check_controller_rule.rc != 0
+
+# ----------------- Save rules -----------------
+- name: Persist iptables rules (Debian Family)
+  ansible.builtin.command: netfilter-persistent save
+  changed_when: false
+  when:
+    - ansible_os_family == "Debian"
+
+- name: Persist iptables rules (RHEL Family)
+  ansible.builtin.command: service iptables save
+  changed_when: false
+  when:
+    - ansible_os_family == "RedHat"

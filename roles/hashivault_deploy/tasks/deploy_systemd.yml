@@ -1,4 +1,3 @@
----
 - name: Deploy Vault systemd service file
   ansible.builtin.template:
     src: vault.service.j2
@@ -8,14 +7,22 @@
     mode: '0644'
   register: hashivault_deploy_systemd_service
 
-
-- name: Reload systemd if vault service file changed
+- name: Reload systemd if service file changed
   ansible.builtin.systemd:
     daemon_reload: true
   when: hashivault_deploy_systemd_service.changed
 
-- name: Restart Vault if config or service changed
+- name: Ensure Vault is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ hashivault_deploy_systemd_service_name }}"
+    enabled: true
+    state: started
+  register: hashivault_deploy_service_status
+
+- name: Restart Vault if config or service unit changed
   ansible.builtin.systemd:
     name: "{{ hashivault_deploy_systemd_service_name }}"
     state: restarted
-  when: hashivault_deploy_vault_hcl.changed or hashivault_deploy_systemd_service.changed
+  when:
+    - hashivault_deploy_service_status.status.ActiveState == "active"
+    - (hashivault_deploy_vault_hcl.changed or hashivault_deploy_systemd_service.changed)

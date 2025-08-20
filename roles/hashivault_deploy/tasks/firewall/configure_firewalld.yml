@@ -1,0 +1,18 @@
+- name: Allow Vault cluster ports via firewalld
+  ansible.posix.firewalld:
+    port: "{{ item.0.port }}/tcp"
+    source: "{{ item.1 }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "allow {{ item.1 }} on port {{ item.0.port }}"
+
+- name: Allow Vault API for Ansible controller via firewalld
+  ansible.posix.firewalld:
+    port: "{{ hashivault_deploy_vault_port }}/tcp"
+    source: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+    permanent: true
+    state: enabled
+    immediate: true

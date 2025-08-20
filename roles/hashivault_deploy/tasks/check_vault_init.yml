@@ -1,0 +1,28 @@
+---
+- name: Get Vault status via API
+  ansible.builtin.uri:
+    url: "{{ hashivault_deploy_vault_addr }}/v1/sys/health"
+    method: GET
+    return_content: true
+    status_code: 200,429,472  # allow standby and sealed codes too
+  register: hashivault_deploy_status_raw
+  failed_when: false
+  changed_when: false
+
+- name: Set fact with initialization status
+  ansible.builtin.set_fact:
+    hashivault_deploy_initialized: "{{ (hashivault_deploy_status_raw.content | from_json).initialized | default(true) }}"
+
+- name: Gather list of initialized hosts
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.set_fact:
+    hashivault_deploy_initialized_hosts: >-
+      {{
+        play_hosts
+        | map('extract', hostvars, 'hashivault_deploy_initialized')
+        | zip(play_hosts)
+        | selectattr('0', 'equalto', true)
+        | map('last')
+        | list
+      }}

@@ -1,0 +1,21 @@
+---
+- name: Allow Vault cluster ports via UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.0.port }}"
+    proto: tcp
+    src: "{{ item.1 }}"
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "allow {{ item.1 }} on port {{ item.0.port }}"
+
+- name: Allow Vault API for Ansible controller via UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ hashivault_deploy_vault_port }}"
+    proto: tcp
+    src: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+
+- name: Ensure UFW is enabled
+  community.general.ufw:
+    state: enabled
