@@ -18,7 +18,7 @@
 # ==========================================================
 # Happens only once when have to bootstrap Vault Cluster(e.g. no inited vault nodes yet)
 # ==========================================================
-- name: Initialize Vault (Shamir) on first node if not initialized and seal is 'none'
+- name: Initialize Vault (Shamir) on first node if not initialized and seal is 'shamir'
   ansible.builtin.uri:
     url: "{{ hashivault_deploy_vault_addr }}/v1/sys/init"
     method: POST
@@ -33,7 +33,7 @@
     - inventory_hostname == play_hosts[0]
     - not hashivault_deploy_initialized
     - hashivault_deploy_bootstrap_allowed
-    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_seal_type == 'shamir'
   run_once: true
   no_log: true
 
@@ -48,7 +48,7 @@
   when:
     - inventory_hostname == play_hosts[0]
     - not hashivault_deploy_initialized
-    - hashivault_deploy_seal_type == 'none'
+    - hashivault_deploy_seal_type == 'shamir'
     - hashivault_deploy_vault_init is defined
     - hashivault_deploy_bootstrap_allowed
   no_log: true

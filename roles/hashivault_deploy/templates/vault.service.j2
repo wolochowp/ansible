@@ -2,12 +2,12 @@
 
 [Unit]
 Description=HashiCorp Vault - A tool for managing secrets
-Documentation=https://www.vaultproject.io/docs/
+Documentation=https://developer.hashicorp.com/vault/docs
 Requires=network-online.target
+After=network-online.target
 ConditionFileNotEmpty={{ hashivault_deploy_config_dir }}/vault.hcl
 StartLimitIntervalSec=60
 StartLimitBurst=3
-
 
 [Service]
 Type=notify
@@ -25,28 +25,12 @@ LimitNOFILE=65536
 LimitMEMLOCK=infinity
 LimitCORE=0
 
-# Security
-ProtectSystem=strict
-ReadWritePaths=/opt/vault
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-ProtectKernelTunables=true
-ProtectHostname=true
-ProtectProc=invisible
-SecureBits=keep-caps
-NoNewPrivileges=true
-AmbientCapabilities={{ hashivault_deploy_capabilities
-  | map('regex_replace', '(cap_[a-z_]+)=\\+ep', '\\1')
-  | map('upper')
-  | join(' ') }}
-
-CapabilityBoundingSet={{ hashivault_deploy_capabilities
-  | map('regex_replace', '(cap_[a-z_]+)=\\+ep', '\\1')
-  | map('upper')
-  | join(' ') }}
+{% if hashivault_deploy_systemd_extras %}
+# Extra systemd security settings
+{%   for key, value in hashivault_deploy_systemd_content.items() %}
+{{ key }}={{ value }}
+{%   endfor %}
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target

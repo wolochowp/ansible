@@ -4,15 +4,24 @@
     msg: "Unsupported OS family: {{ ansible_os_family }}. Only Debian and RedHat families are supported."
   when: ansible_os_family not in ['Debian', 'RedHat']
 
-- name: Add HashiCorp GPG key (Debian family)
-  ansible.builtin.apt_key:
-    url: https://apt.releases.hashicorp.com/gpg
-    state: present
+- name: Ensure directory for APT keyrings exists
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
   when: ansible_os_family == 'Debian'
 
-- name: Add HashiCorp apt repository
+- name: Download HashiCorp GPG key (ASCII-armored)
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /usr/share/keyrings/hashicorp-archive-keyring.asc
+    mode: '0644'
+    force: true
+  when: ansible_os_family == 'Debian'
+
+- name: Add HashiCorp apt repository (Debian/Ubuntu)
   ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_lsb.codename }} main"
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.asc] https://apt.releases.hashicorp.com {{ ansible_lsb.codename }} main"
     state: present
     filename: hashicorp
   when: ansible_os_family == 'Debian'

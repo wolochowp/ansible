@@ -40,7 +40,7 @@ storage "{{ hashivault_deploy_storage_type }}" {
 }
 {% endif %}
 
-{% if hashivault_deploy_seal_type != 'none' %}
+{% if hashivault_deploy_seal_type != 'shamir' %}
 seal "{{ hashivault_deploy_seal_type }}" {
 {% for key, value in hashivault_deploy_seal_config.items() %}
   {{ key }} = {{ value | to_nice_json }}
