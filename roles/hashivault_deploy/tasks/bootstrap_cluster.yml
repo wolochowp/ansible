@@ -61,17 +61,3 @@
   when:
     - inventory_hostname == play_hosts[0]
     - hashivault_deploy_bootstrap_allowed or hashivault_deploy_sealed
-
-- name: Join other nodes to Raft cluster
-  environment:
-    VAULT_ADDR: "{{ hashivault_deploy_vault_addr }}"
-  ansible.builtin.command: >
-    vault operator raft join {{ hostvars[play_hosts[0]].hashivault_deploy_vault_addr }}
-  when:
-    - inventory_hostname != play_hosts[0]
-    - hashivault_deploy_storage_type == 'raft'
-    - hashivault_deploy_bootstrap_allowed
-  register: hashivault_deploy_join_result
-  changed_when:
-    - hashivault_deploy_join_result is changed
-    - hashivault_deploy_join_result.rc == 0

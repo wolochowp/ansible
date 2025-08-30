@@ -8,7 +8,7 @@ hashivault_deploy_version: latest        # or specify exact version e.g. 1.13.0
 hashivault_deploy_config_dir: /etc/vault.d
 hashivault_deploy_data_dir: /opt/vault/data
 hashivault_deploy_cluster_name: "vault-test-cluster"
-hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address|default( ansible_all_ipv4_addresses[0] ) }}"
+hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
 hashivault_deploy_vault_port: 8200
 hashivault_deploy_vault_cluster_port: 8201
 hashivault_deploy_configure_firewall: none

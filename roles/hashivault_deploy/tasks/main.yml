@@ -44,12 +44,19 @@
     - hashivault_deploy_bootstrap_enabled
     - hashivault_deploy_storage_type == 'raft'
     - hashivault_deploy_seal_type == 'shamir'
+
+- name: Join other nodes to Raft cluster
+  ansible.builtin.include_tasks: raft_join.yml
+  when:
+    - hashivault_deploy_storage_type == 'raft'
+
 - name: Check Vault seal status
   ansible.builtin.import_tasks:
     file: check_vault_seal.yml
   when:
     - hashivault_deploy_bootstrap_enabled
     - hashivault_deploy_seal_type == 'shamir'
+
 - name: Unseal Vault
   ansible.builtin.import_tasks:
     file: unseal_vault.yml

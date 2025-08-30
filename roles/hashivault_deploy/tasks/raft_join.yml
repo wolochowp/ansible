@@ -1,0 +1,48 @@
+- name: Join Vault node to Raft cluster if token file exists
+  vars:
+    hashivault_deploy_root_token: "{{ (hashivault_deploy_token_file.content | b64decode | from_json).root_token }}"
+  when: hashivault_deploy_token is file
+  block:
+    - name: Load root token from controller file
+      ansible.builtin.slurp:
+        src: "{{ hashivault_deploy_token }}"
+      register: hashivault_deploy_token_file
+      delegate_to: localhost
+      become: true
+      no_log: false
+
+    - name: Get current Raft cluster members from leader
+      ansible.builtin.uri:
+        url: "{{ hostvars[play_hosts[0]].hashivault_deploy_vault_addr }}/v1/sys/storage/raft/configuration"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ hashivault_deploy_root_token }}"
+        return_content: true
+        status_code: 200
+      register: hashivault_deploy_raft_config
+      no_log: false
+
+    - name: Set list of joined nodes
+      ansible.builtin.set_fact:
+        hashivault_deploy_joined_nodes: >-
+          {{ hashivault_deploy_raft_config.json.data.config.servers | map(attribute='address') | list }}
+      no_log: false
+
+    - name: Join this node to Raft cluster if not already joined
+      ansible.builtin.uri:
+        url: "{{ hashivault_deploy_vault_addr }}/v1/sys/storage/raft/join"
+        method: POST
+        headers:
+          X-Vault-Token: "{{ hashivault_deploy_root_token }}"
+        body_format: json
+        body:
+          leader_api_addr: "{{ hostvars[play_hosts[0]].hashivault_deploy_vault_addr }}"
+        status_code: 200
+      when: inventory_hostname not in hashivault_deploy_joined_nodes
+      register: hashivault_deploy_raft_join_result
+      no_log: false
+
+- name: Skip Raft join if token file not found
+  ansible.builtin.debug:
+    msg: "Token file '{{ hashivault_deploy_token }}' not found, skipping Raft join."
+  when: hashivault_deploy_token is not file
