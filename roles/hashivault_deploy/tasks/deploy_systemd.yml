@@ -10,7 +10,7 @@
 - name: Reload systemd if service file changed
   ansible.builtin.systemd:
     daemon_reload: true
-  when: hashivault_deploy_systemd_service.changed
+  when: hashivault_deploy_systemd_service.changed # noqa: no-handler
 
 - name: Ensure Vault is enabled and running
   ansible.builtin.systemd:

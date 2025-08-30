@@ -42,7 +42,7 @@
   when:
     - ansible_os_family == "Debian"
 
-- name: Persist iptables rules (RHEL Family)
+- name: Persist iptables rules (RHEL Family) # noqa: command-instead-of-module
   ansible.builtin.command: service iptables save
   changed_when: false
   when:

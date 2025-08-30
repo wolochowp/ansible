@@ -9,7 +9,7 @@
 
 - name: Set TLS filenames for current node
   ansible.builtin.set_fact:
-    tls_cert_src: >-
+    hashivault_deploy_tls_cert_src: >-
       {{
         (hashivault_deploy_tls_wildcard | default(false))
         | ternary(
@@ -17,7 +17,7 @@
           inventory_hostname ~ ".pem"
         )
       }}
-    tls_key_src: >-
+    hashivault_deploy_tls_key_src: >-
       {{
         (hashivault_deploy_tls_wildcard | default(false))
         | ternary(
@@ -27,8 +27,8 @@
       }}
 
 - name: Copy Vault TLS certificate file
-  copy:
-    src: "{{ tls_cert_src }}"
+  ansible.builtin.copy:
+    src: "{{ hashivault_deploy_tls_cert_src }}"
     dest: "{{ hashivault_deploy_tls_cert_file }}"
     owner: "{{ hashivault_deploy_user }}"
     group: "{{ hashivault_deploy_group }}"
@@ -36,11 +36,11 @@
   when:
     - hashivault_deploy_tls_cert_file is defined
     - hashivault_deploy_tls_cert_file | length > 0
-    - lookup('file', tls_cert_src, errors='ignore') is not none
+    - lookup('file', hashivault_deploy_tls_cert_src, errors='ignore') is not none
 
 - name: Copy Vault TLS private key file
-  copy:
-    src: "{{ tls_key_src }}"
+  ansible.builtin.copy:
+    src: "{{ hashivault_deploy_tls_key_src }}"
     dest: "{{ hashivault_deploy_tls_key_file }}"
     owner: "{{ hashivault_deploy_user }}"
     group: "{{ hashivault_deploy_group }}"
@@ -48,4 +48,4 @@
   when:
     - hashivault_deploy_tls_key_file is defined
     - hashivault_deploy_tls_key_file | length > 0
-    - lookup('file', tls_key_src, errors='ignore') is not none
+    - lookup('file', hashivault_deploy_tls_key_src, errors='ignore') is not none

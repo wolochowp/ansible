@@ -1,23 +1,25 @@
 # SPDX-License-Identifier: MIT-0
 ---
-# Vault installation & system settings
+# =============================================================
+# 1. Static System & Installation Defaults
+# =============================================================
 hashivault_deploy_systemd_service_name: vault.service
 hashivault_deploy_user: vault
 hashivault_deploy_group: vault
-hashivault_deploy_version: latest        # or specify exact version e.g. 1.13.0
+hashivault_deploy_version: latest  # or specify exact version e.g. 1.13.0
 hashivault_deploy_config_dir: /etc/vault.d
 hashivault_deploy_data_dir: /opt/vault/data
 hashivault_deploy_cluster_name: "vault-test-cluster"
-hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
+
 hashivault_deploy_vault_port: 8200
 hashivault_deploy_vault_cluster_port: 8201
 hashivault_deploy_configure_firewall: none
 hashivault_deploy_bootstrap_enabled: true
-hashivault_deploy_systemd_extras: true
-# Additional systemd vault unit settings, can be overridden or extended
+hashivault_deploy_systemd_extras: false
+
 hashivault_deploy_systemd_content:
   ProtectSystem: "strict"
-  ReadWritePaths: "/opt/vault"
+  ReadWritePaths: "{{ hashivault_deploy_data_dir }}"
   ProtectHome: "read-only"
   PrivateTmp: "true"
   PrivateDevices: "true"
@@ -30,41 +32,51 @@ hashivault_deploy_systemd_content:
   NoNewPrivileges: "yes"
   AmbientCapabilities: "CAP_IPC_LOCK CAP_SYSLOG"
   CapabilityBoundingSet: "CAP_IPC_LOCK CAP_SYSLOG"
+
 # =============================================================
-# TLS settings
-# ============================================================
-hashivault_deploy_tls_enabled: false # If false, ignores all TLS related settings
+# 2. TLS / HTTPS Defaults
+# =============================================================
+hashivault_deploy_tls_enabled: false  # If false, ignores TLS
 hashivault_deploy_tls_wildcard: false
 hashivault_deploy_tls_wildcard_name: false
 hashivault_deploy_tls_cert_file: "/etc/vault/tls/vault.pem"
 hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
 
-# Vault.hcl settings
+# =============================================================
+# 3. Vault Core Static Defaults
+# =============================================================
 hashivault_deploy_ui_enabled: true
 hashivault_deploy_disable_mlock: false
+hashivault_deploy_storage_type: raft
+hashivault_deploy_storage_config:
+  path: "{{ hashivault_deploy_data_dir }}"
+  node_id: "{{ inventory_hostname }}"
+  retry_join: []   # populated dynamically in tasks
+
+hashivault_deploy_seal_type: "shamir"
+hashivault_deploy_seal_config:
+  # region: "eu-central-1"
+  # kms_key_id: "arn:aws:kms:..."
+  # credentials: prefer instance profile or environment variables
+
+hashivault_deploy_telemetry: {}
+
+# =============================================================
+# 4. Vault Token & Shamir Key Management(if used)
+# =============================================================
+hashivault_deploy_token_save_path: "/root"
+hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
+hashivault_deploy_shamir_key_shares: 5
+hashivault_deploy_shamir_key_threshold: 3
+
+
+# =============================================================
+# 6. Dynamic Defaults (based on other variables)
+# =============================================================
+hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
 hashivault_deploy_bind_address: "{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
 hashivault_deploy_protocol: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}"
 hashivault_deploy_api_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
 hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
 hashivault_deploy_cluster_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_cluster_port }}"
-hashivault_deploy_storage_type: raft
-hashivault_deploy_storage_config:
-  path: "{{ hashivault_deploy_data_dir }}"
-  node_id: "{{ inventory_hostname }}"
-  retry_join: []   # populated by tasks using play_hosts
-
-hashivault_deploy_seal_type: "shamir"
-hashivault_deploy_seal_config:
-#  region: "eu-central-1"
-#  kms_key_id: "arn:aws:kms:..."
-  # credentials: prefer instance profile or environment variables
-
-hashivault_deploy_telemetry: {}
-
-
-# Shamir key management settings if used
-hashivault_deploy_shamir_key_shares: 5
-hashivault_deploy_shamir_key_threshold: 3
-hashivault_deploy_token_save_path: "/home/wolkov/"
-hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
-hashivault_deploy_token: "{{ hashivault_deploy_token_save_path ~ hashivault_deploy_token_save_filename }}"
+hashivault_deploy_token: "{{ [hashivault_deploy_token_save_path, hashivault_deploy_token_save_filename] | path_join }}"

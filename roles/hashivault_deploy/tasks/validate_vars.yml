@@ -1,64 +1,163 @@
 ---
-- name: Ensure hashivault_deploy_user is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_user is defined
-      - hashivault_deploy_user != ''
-    fail_msg: "Variable 'hashivault_deploy_user' must be defined and not empty"
-- name: Ensure hashivault_deploy_group is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_group is defined
-      - hashivault_deploy_group != ''
-    fail_msg: "Variable 'hashivault_deploy_group' must be defined and not empty"
-- name: Ensure hashivault_deploy_vault_port is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_vault_port is defined
-      - hashivault_deploy_vault_port != ''
-    fail_msg: "Variable 'hashivault_deploy_vault_port' must be defined and not empty"
-- name: Ensure hashivault_deploy_vault_cluster_port is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_vault_cluster_port is defined
-      - hashivault_deploy_vault_cluster_port != ''
-    fail_msg: "Variable 'hashivault_deploy_vault_cluster_port' must be defined and not empty"
-- name: Ensure hashivault_deploy_vault_addr is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_vault_addr is defined
-      - hashivault_deploy_vault_addr != ''
-    fail_msg: "Variable 'hashivault_deploy_vault_addr' must be defined and not empty"
-- name: Ensure hashivault_deploy_cluster_addr is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_cluster_addr is defined
-      - hashivault_deploy_cluster_addr != ''
-    fail_msg: "Variable 'hashivault_deploy_cluster_addr' must be defined and not empty"
-- name: Ensure hashivault_deploy_tls_enabled is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_tls_enabled is defined
-      - hashivault_deploy_tls_enabled is boolean
-    fail_msg: "Variable 'hashivault_deploy_tls_enabled' must be defined and be a boolean"
+- name: Validate hashivault_deploy variables
+  block:
 
-- name: Ensure hashivault_deploy_storage_type is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_storage_type is defined
-      - hashivault_deploy_storage_type != ''
-    fail_msg: "Variable 'hashivault_deploy_storage_type' must be defined and not empty in defaults/main.yml"
+    # -------------------------
+    # 1. System & Installation
+    # -------------------------
+    - name: Ensure hashivault_deploy_user is defined
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_user is defined
+          - hashivault_deploy_user != ''
+        fail_msg: "Variable 'hashivault_deploy_user' must be defined and not empty"
 
-- name: Ensure hashivault_deploy_seal_type is set
-  ansible.builtin.assert:
-    that:
-      - hashivault_deploy_seal_type is defined
-      - hashivault_deploy_seal_type != ''
-    fail_msg: "Variable 'hashivault_deploy_seal_type' must be defined and not empty in defaults/main.yml"
+    - name: Ensure hashivault_deploy_group is defined
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_group is defined
+          - hashivault_deploy_group != ''
+        fail_msg: "Variable 'hashivault_deploy_group' must be defined and not empty"
 
-- name: Set vault addr fact for each host
-  ansible.builtin.set_fact:
-    hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
+    - name: Ensure vault ports are integers
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_vault_port | int >= 1
+          - hashivault_deploy_vault_port | int <= 65535
+          - hashivault_deploy_vault_cluster_port | int >= 1
+          - hashivault_deploy_vault_cluster_port | int <= 65535
+        fail_msg: "Vault ports must be integers between 1 and 65535"
+
+    # -------------------------
+    # 2. Directory Checks
+    # -------------------------
+    - name: Ensure Vault directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0750"
+      loop:
+        - "{{ hashivault_deploy_config_dir }}"
+        - "{{ hashivault_deploy_data_dir }}"
+
+    - name: Ensure token path directory exists
+      ansible.builtin.file:
+        path: "{{ hashivault_deploy_token_save_path }}"
+        state: directory
+        mode: "0700"
+
+    # -------------------------
+    # 3. TLS / HTTPS
+    # -------------------------
+    - name: Validate TLS booleans
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_tls_enabled in [true, false]
+          - hashivault_deploy_tls_wildcard in [true, false]
+          - hashivault_deploy_tls_wildcard_name in [true, false]
+        fail_msg: "TLS settings must be defined booleans"
+
+    # -------------------------
+    # 4. Vault Core
+    # -------------------------
+    - name: Validate Vault core settings
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_ui_enabled in [true, false]
+          - hashivault_deploy_disable_mlock in [true, false]
+          - hashivault_deploy_storage_type is defined
+          - hashivault_deploy_storage_type != ''
+          - hashivault_deploy_storage_config.path is defined
+          - hashivault_deploy_storage_config.node_id is defined
+        fail_msg: "Vault core settings must be properly defined"
+
+    # -------------------------
+    # 5. Seal / Shamir
+    # -------------------------
+    - name: Validate Shamir settings
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_seal_type is defined
+          - hashivault_deploy_seal_type != ''
+          - hashivault_deploy_shamir_key_shares | int >= 1
+          - hashivault_deploy_shamir_key_threshold | int >= 1
+          - hashivault_deploy_shamir_key_threshold | int <= hashivault_deploy_shamir_key_shares | int
+        fail_msg: "Shamir seal settings are invalid"
+
+    # -------------------------
+    # 6. Token management
+    # -------------------------
+    - name: Ensure Vault token file path is writable
+      ansible.builtin.file:
+        path: "{{ hashivault_deploy_token }}"
+        state: touch
+        mode: "0600"
+
+    # -------------------------
+    # 7. Dynamic addresses / IP
+    # -------------------------
+    - name: Validate Vault IP address format
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_vault_ip is match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$")
+        fail_msg: "hashivault_deploy_vault_ip is not a valid IPv4 address"
+
+    - name: Validate Vault addresses and protocol
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_bind_address is defined
+          - hashivault_deploy_protocol in ['http', 'https']
+          - hashivault_deploy_api_addr is defined
+          - hashivault_deploy_vault_addr is defined
+          - hashivault_deploy_cluster_addr is defined
+        fail_msg: "Vault network addresses must be properly defined"
+
+- name: Ensure system is supported by HashiCorp Vault
+  block:
+    # Debian
+    - name: Assert Debian codename is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution != "Debian" or ansible_lsb.codename in ["bullseye", "bookworm", "trixie"]
+        fail_msg: >
+          Unsupported Debian codename {{ ansible_lsb.codename }}.
+          Supported: bullseye, bookworm, trixie.
+    # Ubuntu
+    - name: Assert Ubuntu codename is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution != "Ubuntu" or ansible_lsb.codename in ["jammy", "noble", "plucky"]
+        fail_msg: >
+          Unsupported Ubuntu codename {{ ansible_lsb.codename }}.
+          Supported: jammy, noble, plucky.
+    # Fedora
+    - name: Assert Fedora version is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution != "Fedora" or (ansible_distribution_version.split('.')[0] | int) in [41, 42]
+        fail_msg: >
+          Unsupported Fedora version {{ ansible_distribution_version }}.
+          Supported: 41, 42.
+    # RHEL/CentOS
+    - name: Assert RHEL/CentOS version is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution not in ["RedHat", "CentOS"] or (ansible_distribution_version.split('.')[0] | int) in [8, 9]
+        fail_msg: >
+          Unsupported RHEL/CentOS version {{ ansible_distribution_version }}.
+          Supported: 8, 9.
+    # Amazon Linux
+    - name: Assert Amazon Linux version is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution != "Amazon" or ansible_distribution_version in ["2", "latest"]
+        fail_msg: >
+          Unsupported Amazon Linux version {{ ansible_distribution_version }}.
+          Supported: 2, latest.
+  rescue:
+    - name: Fail play if OS is unsupported
+      ansible.builtin.fail:
+        msg: "HashiCorp Vault cannot be installed on {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
 # --------------------------------------------------------------------------
 # Ensure file storage is not used with multiple hosts
@@ -109,3 +208,7 @@
       - __cluster_memberships_all | unique | length == 1
     fail_msg: "Cluster membership differs between hosts: {{ __cluster_memberships_all | unique }}"
   run_once: true
+
+- name: Set vault addr fact for each host # Needed for raft join dynamic templating
+  ansible.builtin.set_fact:
+    hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
