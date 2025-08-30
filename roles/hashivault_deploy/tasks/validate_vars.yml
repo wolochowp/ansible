@@ -9,42 +9,35 @@
       ansible.builtin.assert:
         that:
           - hashivault_deploy_user is defined
-          - hashivault_deploy_user != ''
+          - hashivault_deploy_user | length > 0
         fail_msg: "Variable 'hashivault_deploy_user' must be defined and not empty"
 
     - name: Ensure hashivault_deploy_group is defined
       ansible.builtin.assert:
         that:
           - hashivault_deploy_group is defined
-          - hashivault_deploy_group != ''
+          - hashivault_deploy_group | length > 0
         fail_msg: "Variable 'hashivault_deploy_group' must be defined and not empty"
 
     - name: Ensure vault ports are integers
       ansible.builtin.assert:
         that:
-          - hashivault_deploy_vault_port | int >= 1
-          - hashivault_deploy_vault_port | int <= 65535
-          - hashivault_deploy_vault_cluster_port | int >= 1
-          - hashivault_deploy_vault_cluster_port | int <= 65535
+          - (hashivault_deploy_vault_port | int) >= 1
+          - (hashivault_deploy_vault_port | int) <= 65535
+          - (hashivault_deploy_vault_cluster_port | int) >= 1
+          - (hashivault_deploy_vault_cluster_port | int) <= 65535
         fail_msg: "Vault ports must be integers between 1 and 65535"
 
     # -------------------------
-    # 2. Directory Checks
+    # 2. Directory variables (only validate, no creation!)
     # -------------------------
-    - name: Ensure Vault directories exist
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: "0750"
-      loop:
-        - "{{ hashivault_deploy_config_dir }}"
-        - "{{ hashivault_deploy_data_dir }}"
-
-    - name: Ensure token path directory exists
-      ansible.builtin.file:
-        path: "{{ hashivault_deploy_token_save_path }}"
-        state: directory
-        mode: "0700"
+    - name: Ensure Vault directory vars are defined
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_config_dir is defined
+          - hashivault_deploy_data_dir is defined
+          - hashivault_deploy_token_save_path is defined
+        fail_msg: "Vault directory variables must be defined"
 
     # -------------------------
     # 3. TLS / HTTPS
@@ -52,10 +45,10 @@
     - name: Validate TLS booleans
       ansible.builtin.assert:
         that:
-          - hashivault_deploy_tls_enabled in [true, false]
-          - hashivault_deploy_tls_wildcard in [true, false]
-          - hashivault_deploy_tls_wildcard_name in [true, false]
-        fail_msg: "TLS settings must be defined booleans"
+          - hashivault_deploy_tls_enabled | type_debug == "bool"
+          - hashivault_deploy_tls_wildcard | type_debug == "bool"
+          - hashivault_deploy_tls_wildcard_name | type_debug == "bool"
+        fail_msg: "TLS settings must be boolean values"
 
     # -------------------------
     # 4. Vault Core
@@ -63,10 +56,9 @@
     - name: Validate Vault core settings
       ansible.builtin.assert:
         that:
-          - hashivault_deploy_ui_enabled in [true, false]
-          - hashivault_deploy_disable_mlock in [true, false]
-          - hashivault_deploy_storage_type is defined
-          - hashivault_deploy_storage_type != ''
+          - hashivault_deploy_ui_enabled | type_debug == "bool"
+          - hashivault_deploy_disable_mlock | type_debug == "bool"
+          - hashivault_deploy_storage_type | length > 0
           - hashivault_deploy_storage_config.path is defined
           - hashivault_deploy_storage_config.node_id is defined
         fail_msg: "Vault core settings must be properly defined"
@@ -77,21 +69,21 @@
     - name: Validate Shamir settings
       ansible.builtin.assert:
         that:
-          - hashivault_deploy_seal_type is defined
-          - hashivault_deploy_seal_type != ''
-          - hashivault_deploy_shamir_key_shares | int >= 1
-          - hashivault_deploy_shamir_key_threshold | int >= 1
-          - hashivault_deploy_shamir_key_threshold | int <= hashivault_deploy_shamir_key_shares | int
+          - hashivault_deploy_seal_type | length > 0
+          - (hashivault_deploy_shamir_key_shares | int) >= 1
+          - (hashivault_deploy_shamir_key_threshold | int) >= 1
+          - (hashivault_deploy_shamir_key_threshold | int) <= (hashivault_deploy_shamir_key_shares | int)
         fail_msg: "Shamir seal settings are invalid"
 
     # -------------------------
     # 6. Token management
     # -------------------------
-    - name: Ensure Vault token file path is writable
-      ansible.builtin.file:
-        path: "{{ hashivault_deploy_token }}"
-        state: touch
-        mode: "0600"
+    - name: Validate Vault token variable is defined
+      ansible.builtin.assert:
+        that:
+          - hashivault_deploy_token is defined
+          - hashivault_deploy_token | length > 0
+        fail_msg: "Vault token variable must be defined"
 
     # -------------------------
     # 7. Dynamic addresses / IP

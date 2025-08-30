@@ -64,7 +64,7 @@ hashivault_deploy_telemetry: {}
 # =============================================================
 # 4. Vault Token & Shamir Key Management(if used)
 # =============================================================
-hashivault_deploy_token_save_path: "/root"
+hashivault_deploy_token_save_path: "/secrets"
 hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
 hashivault_deploy_shamir_key_shares: 5
 hashivault_deploy_shamir_key_threshold: 3
