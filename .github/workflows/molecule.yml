@@ -2,7 +2,7 @@ name: Molecule Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main roles/hashivault_deploy ]
   pull_request:
 
 jobs:
