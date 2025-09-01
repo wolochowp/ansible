@@ -1,5 +1,8 @@
+- name: Get Seal status
+  ansible.builtin.include_tasks: check_vault_seal.yml
+
 - name: Unseal Vault nodes if token file exists
-  when: hashivault_deploy_token is file
+  when: hashivault_deploy_token is file and hashivault_deploy_sealed
   block:
     - name: Load unseal keys from controller file
       ansible.builtin.slurp:

@@ -15,8 +15,13 @@ hashivault_deploy_vault_port: 8200
 hashivault_deploy_vault_cluster_port: 8201
 hashivault_deploy_configure_firewall: none
 hashivault_deploy_bootstrap_enabled: true
-hashivault_deploy_systemd_extras: false
+hashivault_deploy_use_env_file: true
+hashivault_deploy_env_file_content: {}
 
+
+hashivault_deploy_force_raft_join: false
+hashivault_deploy_systemd_extras: true
+# Additional systemd hardening options if hashivault_deploy_systemd_extras is true
 hashivault_deploy_systemd_content:
   ProtectSystem: "strict"
   ReadWritePaths: "{{ hashivault_deploy_data_dir }}"
@@ -47,17 +52,20 @@ hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
 # =============================================================
 hashivault_deploy_ui_enabled: true
 hashivault_deploy_disable_mlock: false
-hashivault_deploy_storage_type: raft
+hashivault_deploy_storage_type: raft # supported types: raft, file (others not implemented yet)
 hashivault_deploy_storage_config:
   path: "{{ hashivault_deploy_data_dir }}"
   node_id: "{{ inventory_hostname }}"
   retry_join: []   # populated dynamically in tasks
 
 hashivault_deploy_seal_type: "shamir"
-hashivault_deploy_seal_config:
-  # region: "eu-central-1"
-  # kms_key_id: "arn:aws:kms:..."
-  # credentials: prefer instance profile or environment variables
+hashivault_deploy_seal_config: {}
+
+# Example AWS KMS seal config
+# hashivault_deploy_seal_type: "awskms"
+# hashivault_deploy_seal_config:
+#   region: "eu-north-1"
+#   kms_key_id: "arn:aws:kms:eu-north-1:aasdfsad:key/asdfasdf-asdf-asdf-asdf-asdfasdf"
 
 hashivault_deploy_telemetry: {}
 
@@ -68,6 +76,10 @@ hashivault_deploy_token_save_path: "/secrets"
 hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
 hashivault_deploy_shamir_key_shares: 5
 hashivault_deploy_shamir_key_threshold: 3
+hashivault_deploy_stored_shares: 1
+hashivault_deploy_enable_recovery: true
+hashivault_deploy_recovery_key_shares: 5
+hashivault_deploy_recovery_key_threshold: 3
 
 
 # =============================================================

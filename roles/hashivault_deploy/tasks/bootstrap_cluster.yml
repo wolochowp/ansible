@@ -18,14 +18,37 @@
 # ==========================================================
 # Happens only once when have to bootstrap Vault Cluster(e.g. no inited vault nodes yet)
 # ==========================================================
-- name: Initialize Vault (Shamir) on first node if not initialized and seal is 'shamir'
+- name: Build Vault init payload
+  ansible.builtin.set_fact:
+    hashivault_deploy_init_payload: >-
+      {%- set payload = {} -%}
+      {%- if hashivault_deploy_seal_type == 'shamir' -%}
+        {%- set _ = payload.update({
+          'secret_shares': hashivault_deploy_shamir_key_shares,
+          'secret_threshold': hashivault_deploy_shamir_key_threshold
+        }) -%}
+      {%- endif -%}
+
+      {%- if hashivault_deploy_seal_type != 'shamir' -%}
+        {%- set _ = payload.update({
+          'stored_shares': hashivault_deploy_stored_shares
+        }) -%}
+        {%- if hashivault_deploy_enable_recovery -%}
+          {%- set _ = payload.update({
+            'recovery_shares': hashivault_deploy_recovery_key_shares,
+            'recovery_threshold': hashivault_deploy_recovery_key_threshold
+          }) -%}
+        {%- endif -%}
+      {%- endif -%}
+
+      {{ payload | to_json }}
+
+- name: Initialize Vault on leader node
   ansible.builtin.uri:
     url: "{{ hashivault_deploy_vault_addr }}/v1/sys/init"
     method: POST
     body_format: json
-    body:
-      secret_shares: "{{ hashivault_deploy_shamir_key_shares }}"
-      secret_threshold: "{{ hashivault_deploy_shamir_key_threshold }}"
+    body: "{{ hashivault_deploy_init_payload }}"
     return_content: true
     status_code: 200
   register: hashivault_deploy_vault_init
@@ -33,11 +56,10 @@
     - inventory_hostname == play_hosts[0]
     - not hashivault_deploy_initialized
     - hashivault_deploy_bootstrap_allowed
-    - hashivault_deploy_seal_type == 'shamir'
   run_once: true
   no_log: true
 
-- name: Save unseal keys and root token to file on controller
+- name: Save unseal keys/recovery keys and root token to file on controller
   ansible.builtin.copy:
     dest: "{{ hashivault_deploy_token }}"
     content: "{{ hashivault_deploy_vault_init.content }}"
@@ -48,16 +70,13 @@
   when:
     - inventory_hostname == play_hosts[0]
     - not hashivault_deploy_initialized
-    - hashivault_deploy_seal_type == 'shamir'
     - hashivault_deploy_vault_init is defined
     - hashivault_deploy_bootstrap_allowed
-  no_log: true
-
-- name: Get Seal status
-  ansible.builtin.include_tasks: check_vault_seal.yml
+  no_log: false
 
 - name: Unseal leader Vault node
   ansible.builtin.include_tasks: unseal_vault.yml
   when:
     - inventory_hostname == play_hosts[0]
-    - hashivault_deploy_bootstrap_allowed or hashivault_deploy_sealed
+    - hashivault_deploy_bootstrap_allowed
+    - hashivault_deploy_seal_type == 'shamir'

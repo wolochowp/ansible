@@ -76,12 +76,21 @@
     group: "{{ hashivault_deploy_group }}"
     mode: '0700'
 
+- name: Template vault.env file if enabled
+  ansible.builtin.template:
+    src: vault.env.j2
+    dest: "{{ hashivault_deploy_config_dir }}/vault.env"
+    owner: root
+    group: root
+    mode: '0600'
+  when: hashivault_deploy_use_env_file
+
 - name: Set VAULT_ADDR in /etc/environment
   ansible.builtin.lineinfile:
     path: /etc/environment
     regexp: '^VAULT_ADDR='
     line: >-
-      VAULT_ADDR={{ 'https' if hashivault_deploy_tls_enabled else 'http' }}://{{ ansible_host }}:8200
+      VAULT_ADDR={{ hashivault_deploy_api_addr }}
     create: true
     state: present
     mode: '0644'

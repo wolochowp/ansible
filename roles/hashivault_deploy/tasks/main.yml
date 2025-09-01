@@ -25,37 +25,27 @@
 - name: Deploy Vaults TLS certificates
   ansible.builtin.import_tasks:
     file: deploy_tls.yml
-  when:
-    - hashivault_deploy_tls_enabled
+  when: hashivault_deploy_tls_enabled
 
 - name: Deploy Vault systemd service
   ansible.builtin.import_tasks:
     file: deploy_systemd.yml
 
-- name: Check Vault status
+- name: Check Vault Initialization status
   ansible.builtin.import_tasks:
     file: check_vault_init.yml
-  when:
-    - hashivault_deploy_bootstrap_enabled
+  when: hashivault_deploy_bootstrap_enabled
+
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
     file: bootstrap_cluster.yml
   when:
     - hashivault_deploy_bootstrap_enabled
-    - hashivault_deploy_storage_type == 'raft'
-    - hashivault_deploy_seal_type == 'shamir'
 
 - name: Join other nodes to Raft cluster
   ansible.builtin.include_tasks: raft_join.yml
   when:
-    - hashivault_deploy_storage_type == 'raft'
-
-- name: Check Vault seal status
-  ansible.builtin.import_tasks:
-    file: check_vault_seal.yml
-  when:
-    - hashivault_deploy_bootstrap_enabled
-    - hashivault_deploy_seal_type == 'shamir'
+    - (hashivault_deploy_storage_type == 'raft' and hashivault_deploy_storage_config.retry_join | length == 0) or hashivault_deploy_force_raft_join
 
 - name: Unseal Vault
   ansible.builtin.import_tasks:
