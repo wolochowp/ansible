@@ -215,7 +215,10 @@
       - __cluster_memberships_all | unique | length == 1
     fail_msg: "Cluster membership differs between hosts: {{ __cluster_memberships_all | unique }}"
   run_once: true
-
-- name: Set vault addr fact for each host # Needed for raft join dynamic templating
+# --------------------------------------------------------------------------
+# Others
+# --------------------------------------------------------------------------
+ # Needed for raft join dynamic templating as it depends on hostvars
+- name: Set vault addr fact for each host
   ansible.builtin.set_fact:
     hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_port }}"

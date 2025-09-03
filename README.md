@@ -7,8 +7,8 @@ A curated collection of reusable and well-structured **Ansible roles** designed 
 ## 📦 Roles Included
 
 ### `mikrotik_backup`
-Backup role for MikroTik RouterOS devices  
-📁 Location: `roles/mikrotik/mikrotik_backup`
+Backup role for MikroTik RouterOS devices
+📁 Location: `roles/mikrotik_backup`
 
 - Supports both `.backup` and `.rsc` MikroTik backup formats.
 - Works with:
@@ -21,8 +21,8 @@ Backup role for MikroTik RouterOS devices
 ---
 
 ### `mikrotik_sshkeyinstall`
-Role to install SSH public keys for MikroTik users  
-📁 Location: `roles/mikrotik/mikrotik_sshkeyinstall`
+Role to install SSH public keys for MikroTik users
+📁 Location: `roles/mikrotik_sshkeyinstall`
 
 - Installs `.pub` SSH keys (`ssh-rsa` and `ssh-ed25519`) on MikroTik users.
 - Optional verification of:
@@ -38,6 +38,23 @@ Role to install SSH public keys for MikroTik users
 
 ---
 
+### `hashivault_deploy`
+Role to install, configure, and bootstrap a **HashiCorp Vault cluster**
+📁 Location: `roles/hashivault_deploy`
+
+- Installs Vault from official releases and configures systemd service for Linux hosts.
+- Supports multiple storage backends: `raft` (recommended) and `file`.
+- Supports Shamir and cloud KMS-based auto-unseal (`awskms`, `azurekeyvault`, `gcpckms`, `hsm`, `transit`).
+- TLS and mTLS support with wildcard or per-node certificates.
+- Systemd hardening options for secure Vault deployment.
+- Dynamic cluster join via `retry_join` or manual Raft join.
+- Vault token and recovery key management with Shamir key shares.
+- Fully customizable via role variables, including Vault ports, bind addresses, cluster names, and telemetry.
+- Idempotent and production-ready deployment with optional bootstrapping of Vault root token.
+
+> ⚠️ Sensitive data (root tokens, unseal keys) is handled securely with optional `no_log` flags. Ensure Vault nodes are reachable from the Ansible controller.
+
+---
 ## 🚀 Getting Started
 
 Each role includes a `README.md` with detailed usage, examples, variables, and requirements. Just import them into your playbook and inventory, and you're ready to automate MikroTik like a pro.
