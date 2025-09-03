@@ -5,3 +5,31 @@ inventory.ini
 playbook.yml
 ansible.cfg
 /roles/mikrotik/mikrotik_sshkeyinstall/files/*
+.ansible/
+.vscode/
+
+
+# Molecule temporary files & cache
+roles/hashivault_deploy/molecule/**/.molecule/
+roles/hashivault_deploy/molecule/**/__pycache__/
+roles/hashivault_deploy/molecule/**/*.retry
+
+# Vault token files generated during tests
+roles/hashivault_deploy/molecule/**/vault-init-keys.json
+
+# Any temporary log files
+roles/hashivault_deploy/molecule/**/tmp/
+roles/hashivault_deploy/molecule/**/*.log
+
+# Python / Ansible / Molecule
+__pycache__/
+*.pyc
+.molecule/
+
+# Local secrets
+roles/hashivault_deploy/hashivault_token.json
+
+# Temporary files
+*.retry
+
+roles/hashivault_deploy/files/*

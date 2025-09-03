@@ -1,0 +1,37 @@
+---
+- name: Install iptables persistence packages (Debian)
+  ansible.builtin.apt:
+    name: iptables-persistent
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install iptables-services (RHEL)
+  ansible.builtin.dnf:
+    name: iptables-services
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Allow Vault cluster members on required ports
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ item.1 }}"
+    destination_port: "{{ item.0.port }}"
+    jump: ACCEPT
+    state: present
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "allow {{ item.1 }} on port {{ item.0.port }}"
+
+# ----------------- Save rules -----------------
+- name: Persist iptables rules (Debian Family)
+  ansible.builtin.command: netfilter-persistent save
+  changed_when: false
+  when:
+    - ansible_os_family == "Debian"
+
+- name: Persist iptables rules (RHEL Family) # noqa: command-instead-of-module
+  ansible.builtin.command: service iptables save
+  changed_when: false
+  when:
+    - ansible_os_family == "RedHat"

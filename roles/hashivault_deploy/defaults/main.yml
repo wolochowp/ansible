@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: MIT-0
+---
+# =============================================================
+# 1. System & Installation Defaults
+# =============================================================
+hashivault_deploy_systemd_service_name: vault.service
+hashivault_deploy_user: vault
+hashivault_deploy_group: vault
+hashivault_deploy_version: latest           # or specify exact version, e.g., 1.13.0
+hashivault_deploy_config_dir: /etc/vault.d
+hashivault_deploy_data_dir: /opt/vault/data
+hashivault_deploy_cluster_name: "vault-test-cluster"
+hashivault_deploy_telemetry: {}             # Optional telemetry configuration
+
+# Vault service ports
+hashivault_deploy_vault_port: 8200
+hashivault_deploy_vault_cluster_port: 8201
+
+# Security & firewall
+hashivault_deploy_configure_firewall: iptables
+hashivault_deploy_bootstrap_enabled: true
+hashivault_deploy_use_env_file: true
+hashivault_deploy_env_file_content: {}      # Use ansible-vault for secrets
+# Example:
+# hashivault_deploy_env_file_content:
+#   AWS_ACCESS_KEY_ID: YOUR_AWS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY: YOUR_AWS_SECRET_KEY
+
+# Raft cluster join strategy
+# Preferred: retry_join in Vault config
+# Alternative: use explicit raft_join.yml task
+hashivault_deploy_force_raft_join: false
+
+# Systemd hardening options
+hashivault_deploy_systemd_extras: true
+hashivault_deploy_systemd_content:
+  ProtectSystem: "strict"
+  ReadWritePaths: "{{ hashivault_deploy_data_dir }}"
+  ProtectHome: "read-only"
+  PrivateTmp: "true"
+  PrivateDevices: "true"
+  ProtectKernelModules: "true"
+  ProtectControlGroups: "true"
+  ProtectKernelTunables: "true"
+  ProtectHostname: "true"
+  ProtectProc: "invisible"
+  SecureBits: "keep-caps"
+  NoNewPrivileges: "yes"
+  AmbientCapabilities: "CAP_IPC_LOCK CAP_SYSLOG"
+  CapabilityBoundingSet: "CAP_IPC_LOCK CAP_SYSLOG"
+
+
+# =============================================================
+# 2. TLS / HTTPS Defaults
+# =============================================================
+hashivault_deploy_tls_enabled: true
+hashivault_deploy_mtls_enabled: true
+hashivault_deploy_tls_cert_dir: "/etc/vault/tls"
+
+# Source directory on controller for certificates, keys, and CA
+hashivault_deploy_tls_src_dir: "{{ role_path }}/files"
+
+# Wildcard certificates (optional)
+hashivault_deploy_tls_wildcard: false
+hashivault_deploy_tls_wildcard_cert_file: "wildcard.pem"
+hashivault_deploy_tls_wildcard_key_file: "wildcard.key"
+
+# CA certificate (required if mTLS is enabled)
+hashivault_deploy_tls_ca_file: "ca.pem"
+
+# Individual node certificates (if not using wildcard)
+# Place files as <inventory_hostname>.pem / <inventory_hostname>.key in tls_src_dir
+
+
+# =============================================================
+# 3. Vault Core Defaults
+# =============================================================
+hashivault_deploy_ui_enabled: true
+hashivault_deploy_disable_mlock: false
+
+hashivault_deploy_storage_type: raft       # Supported: raft, file
+hashivault_deploy_storage_config:
+  path: "{{ hashivault_deploy_data_dir }}"
+  node_id: "{{ inventory_hostname }}"
+  retry_join: []                            # Populated dynamically by tasks
+
+# =============================================================
+# 4. Seal Configuration (Auto-Unseal)
+# Supported types: shamir, awskms, azurekeyvault, gcpckms, hsm, transit
+# =============================================================
+hashivault_deploy_seal_type: "shamir"       # Default: shamir
+hashivault_deploy_seal_config: {}           # Empty because Shamir does not require external config
+
+
+# =============================================================
+# 5. Vault Token, Shamir Keys & Recovery Keys
+# =============================================================
+hashivault_deploy_token_save_path: "/secrets"
+hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
+
+# Shamir auto-unseal
+hashivault_deploy_shamir_key_shares: 5
+hashivault_deploy_shamir_key_threshold: 3
+hashivault_deploy_stored_shares: 1          # Used for auto-unseal
+
+# Recovery key
+hashivault_deploy_enable_recovery: true
+hashivault_deploy_recovery_key_shares: 5
+hashivault_deploy_recovery_key_threshold: 3
+
+
+# =============================================================
+# 6. Dynamic Defaults (Computed from other variables)
+# =============================================================
+
+# Vault IP address to bind to. By default, uses the primary IPv4 of the system.
+# If the system has multiple network interfaces, you may override this variable
+# to explicitly specify the interface/IP that Vault should bind to.
+# Preferably, use hostvars to reference a specific host if needed.
+hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
+
+# Vault DNS name for API and cluster communication.
+# By default, uses Ansible's detected FQDN. Override this if the FQDN is incorrect,
+# or if you want Vault to advertise a specific DNS name different from the system's hostname.
+# Preferably, use hostvars to reference a specific host if needed.
+hashivault_deploy_dns_name: "{{ ansible_fqdn }}"
+
+# Binding address
+hashivault_deploy_bind_address: "{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
+
+# Protocol selection
+hashivault_deploy_protocol: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}"
+
+# Connection method: prefer DNS if TLS is enabled, else IP
+hashivault_deploy_vault_con_method: "{{ hashivault_deploy_tls_enabled | bool | ternary(hashivault_deploy_dns_name, hashivault_deploy_vault_ip) }}"
+
+# Vault addresses
+hashivault_deploy_api_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_port }}"
+hashivault_deploy_vault_addr: "{{ hashivault_deploy_api_addr }}"
+hashivault_deploy_cluster_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_cluster_port }}"
+
+# Path to stored Vault token
+hashivault_deploy_token: "{{ [hashivault_deploy_token_save_path, hashivault_deploy_token_save_filename] | path_join }}"
+
+
+# =============================================================
+# 7. Seal Type Snippets (Examples for Auto-Unseal)
+# =============================================================
+
+# ----------------------
+# Example: AWS KMS
+# ----------------------
+# hashivault_deploy_seal_type: "awskms"
+# hashivault_deploy_seal_config:
+#   region: "eu-north-1"
+#   kms_key_id: "arn:aws:kms:REGION:ACCOUNT_ID:key/EXAMPLE-KEY-ID"
+#   # Optional credentials; can also be set via hashivault_deploy_env_file_content:
+#   access_key: "<AWS_ACCESS_KEY_ID>"
+#   secret_key: "<AWS_SECRET_ACCESS_KEY>"
+#   session_token: "<AWS_SESSION_TOKEN>"  # optional
+
+# ----------------------
+# Example: Azure Key Vault
+# ----------------------
+# hashivault_deploy_seal_type: "azurekeyvault"
+# hashivault_deploy_seal_config:
+#   tenant_id: "<TENANT_ID>"
+#   client_id: "<CLIENT_ID>"
+#   client_secret: "<CLIENT_SECRET>"
+#   vault_name: "<VAULT_NAME>"
+#   key_name: "<KEY_NAME>"
+
+# ----------------------
+# Example: GCP KMS
+# ----------------------
+# hashivault_deploy_seal_type: "gcpckms"
+# hashivault_deploy_seal_config:
+#   project: "<GCP_PROJECT_ID>"
+#   region: "<GCP_KMS_REGION>"
+#   key_ring: "<KEY_RING>"
+#   crypto_key: "<CRYPTO_KEY>"
+
+# ----------------------
+# Example: HSM (PKCS#11)
+# ----------------------
+# hashivault_deploy_seal_type: "hsm"
+# hashivault_deploy_seal_config:
+#   lib: "/usr/local/lib/softhsm/libsofthsm2.so"
+#   slot: 0
+#   pin: "<HSM_PIN>"
+#   key_label: "<KEY_LABEL>"
+
+# ----------------------
+# Example: Transit (Vault's Transit Engine)
+# ----------------------
+# hashivault_deploy_seal_type: "transit"
+# hashivault_deploy_seal_config:
+#   address: "https://vault-transit.example.com:8200"
+#   token: "<VAULT_TOKEN>"
+#   key_name: "<TRANSIT_KEY_NAME>"

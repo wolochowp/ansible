@@ -1,0 +1,72 @@
+- name: Join Vault node to Raft cluster if token file exists
+  when: hashivault_deploy_token is file
+  block:
+
+    # === Load root token ===
+    - name: Load root token from controller file
+      ansible.builtin.slurp:
+        src: "{{ hashivault_deploy_token }}"
+      register: hashivault_deploy_token_file
+      delegate_to: localhost
+      become: true
+      no_log: true
+
+    # === Detect Vault leader node ===
+    - name: Query leader status from all Vault nodes
+      ansible.builtin.uri:
+        url: "{{ hostvars[item].hashivault_deploy_vault_addr }}/v1/sys/leader"
+        method: GET
+        return_content: true
+        status_code: [200, 503]  # allow sealed nodes
+      loop: "{{ play_hosts }}"
+      register: hashivault_deploy_vault_leader_check
+      run_once: true
+
+    - name: Detect unsealed leader node
+      ansible.builtin.set_fact:
+        hashivault_deploy_vault_leader_addr: "{{ item.json.leader_address }}"
+      loop: "{{ hashivault_deploy_vault_leader_check.results }}"
+      when: item.json is defined and 'leader_address' in item.json
+      run_once: true
+      delegate_to: localhost
+
+    - name: Debug which node is leader
+      ansible.builtin.debug:
+        msg: "Vault leader detected at {{ hashivault_deploy_vault_leader_addr }}"
+      run_once: true
+      delegate_to: localhost
+
+    # === Get Raft cluster configuration from leader ===
+    - name: Get current Raft cluster members from leader
+      ansible.builtin.uri:
+        url: "{{ hashivault_deploy_vault_leader_addr }}/v1/sys/storage/raft/configuration"
+        method: GET
+        headers:
+          X-Vault-Token: "{{ (hashivault_deploy_token_file.content | b64decode | from_json).root_token }}"
+        return_content: true
+        status_code: 200
+      register: hashivault_deploy_raft_config
+      run_once: true
+      retries: 5
+      delay: 5
+
+    - name: Set list of joined nodes
+      ansible.builtin.set_fact:
+        hashivault_deploy_joined_nodes: >-
+          {{ hashivault_deploy_raft_config.json.data.config.servers | map(attribute='node_id') | list }}
+      delegate_to: localhost
+      no_log: false
+
+    # === Join node if not already in cluster ===
+    - name: Join this node to Raft cluster if not already joined
+      ansible.builtin.uri:
+        url: "{{ hashivault_deploy_vault_addr }}/v1/sys/storage/raft/join"
+        method: POST
+        headers:
+          X-Vault-Token: "{{ (hashivault_deploy_token_file.content | b64decode | from_json).root_token }}"
+        body_format: json
+        body:
+          leader_api_addr: "{{ hashivault_deploy_vault_leader_addr }}"
+        status_code: 200
+      when: inventory_hostname not in hashivault_deploy_joined_nodes
+      register: hashivault_deploy_raft_join_result

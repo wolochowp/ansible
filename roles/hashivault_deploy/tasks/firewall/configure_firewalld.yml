@@ -1,0 +1,9 @@
+- name: Allow Vault cluster ports via firewalld
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item.1 }}" port port="{{ item.0.port }}" protocol="tcp" accept'
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ hashivault_deploy_cluster_ports | product(hashivault_deploy_cluster_hosts) | list }}"
+  loop_control:
+    label: "allow {{ item.1 }} on port {{ item.0.port }}"

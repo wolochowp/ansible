@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for hashivault_deploy
+- name: Validate required variables
+  ansible.builtin.import_tasks:
+    file: validate_vars.yml
+
+- name: Install required dependencies
+  ansible.builtin.import_tasks:
+    file: install_deps.yml
+
+- name: Configure firewall on Vault nodes to allow Vault traffic
+  ansible.builtin.import_tasks:
+    file: configure_firewall.yml
+  when: hashivault_deploy_configure_firewall != 'none'
+
+- name: Install Vault
+  ansible.builtin.import_tasks:
+    file: install_vault.yml
+
+- name: Deploy Vault configuration
+  ansible.builtin.import_tasks:
+    file: deploy_config.yml
+
+- name: Deploy Vaults TLS certificates
+  ansible.builtin.import_tasks:
+    file: deploy_tls.yml
+  when: hashivault_deploy_tls_enabled
+
+- name: Deploy Vault systemd service
+  ansible.builtin.import_tasks:
+    file: deploy_systemd.yml
+
+- name: Check/Update Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_status.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Unseal Vault
+  ansible.builtin.import_tasks:
+    file: unseal_vault.yml
+  when:
+    - hashivault_deploy_status.initialized is defined
+    - hashivault_deploy_status.sealed is defined
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_status.initialized
+    - hashivault_deploy_status.sealed
+    - hashivault_deploy_seal_type == "shamir"
+
+- name: Bootstrap Vault cluster
+  ansible.builtin.import_tasks:
+    file: bootstrap_cluster.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Check/Update Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_status.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Join other nodes to Raft cluster
+  ansible.builtin.include_tasks: raft_join.yml
+  when:
+    - (hashivault_deploy_storage_type == 'raft' and hashivault_deploy_storage_config.retry_join | length == 0) or hashivault_deploy_force_raft_join
+
+- name: Check/Update Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_status.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Unseal Vault
+  ansible.builtin.import_tasks:
+    file: unseal_vault.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_seal_type == 'shamir'
+    - hashivault_deploy_status.sealed

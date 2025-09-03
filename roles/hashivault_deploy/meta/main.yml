@@ -1,0 +1,36 @@
+---
+galaxy_info:
+  author: "Paweł Wołochow"
+  description: "Deploy and bootstrap HashiCorp Vault clusters with support for multiple storage backends and seal types."
+  company: ""
+  license: MIT
+  role_name: hashivault_deploy
+  namespace: wolochowp
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
+  galaxy_tags:
+    - vault
+    - hashicorp
+    - security
+    - secrets
+    - cluster
+    - deployment
+    - automation
+
+dependencies: []

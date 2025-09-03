@@ -1,0 +1,15 @@
+- name: Define Vault cluster ports and hosts
+  ansible.builtin.set_fact:
+    hashivault_deploy_cluster_ports:
+      - { port: "{{ hashivault_deploy_vault_port }}" }
+      - { port: "{{ hashivault_deploy_vault_cluster_port }}" }
+    hashivault_deploy_cluster_hosts: >-
+      {{ play_hosts
+         | difference([inventory_hostname])
+         | map('extract', hostvars, ['hashivault_deploy_vault_ip'])
+         | list }}
+
+
+- name: Import firewall configuration tasks
+  ansible.builtin.include_tasks: "firewall/configure_{{ hashivault_deploy_configure_firewall }}.yml"
+  when: hashivault_deploy_configure_firewall is defined and hashivault_deploy_configure_firewall != 'none'
