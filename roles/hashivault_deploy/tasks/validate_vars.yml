@@ -39,17 +39,23 @@
           - hashivault_deploy_token_save_path is defined
         fail_msg: "Vault directory variables must be defined"
 
-    # -------------------------
-    # 3. TLS / HTTPS
-    # -------------------------
-    - name: Validate TLS booleans
+# -------------------------
+# 3. TLS / HTTPS
+# -------------------------
+    - name: Validate TLS settings
       ansible.builtin.assert:
         that:
-          - hashivault_deploy_tls_enabled | type_debug == "bool"
-          - hashivault_deploy_tls_wildcard | type_debug == "bool"
-          - hashivault_deploy_tls_wildcard_name | type_debug == "bool"
-        fail_msg: "TLS settings must be boolean values"
-
+          - hashivault_deploy_tls_enabled is boolean
+          - hashivault_deploy_tls_wildcard is boolean
+          - (not hashivault_deploy_tls_enabled) or (hashivault_deploy_tls_cert_dir | length > 0)
+          - (not hashivault_deploy_tls_enabled) or (hashivault_deploy_tls_src_dir | length > 0)
+          - (not hashivault_deploy_tls_wildcard) or (hashivault_deploy_tls_wildcard_cert_file | length > 0)
+          - (not hashivault_deploy_tls_wildcard) or (hashivault_deploy_tls_wildcard_key_file | length > 0)
+        fail_msg: >
+          TLS configuration invalid:
+          - `hashivault_deploy_tls_enabled` and `hashivault_deploy_tls_wildcard` must be booleans.
+          - If TLS is enabled, cert_dir and src_dir must be set.
+          - If wildcard TLS is enabled, wildcard cert/key filenames must be provided.
     # -------------------------
     # 4. Vault Core
     # -------------------------
@@ -110,42 +116,51 @@
     - name: Assert Debian codename is supported
       ansible.builtin.assert:
         that:
-          - ansible_distribution != "Debian" or ansible_lsb.codename in ["bullseye", "bookworm", "trixie"]
+          - ansible_lsb.codename in ["bullseye", "bookworm", "trixie"]
         fail_msg: >
           Unsupported Debian codename {{ ansible_lsb.codename }}.
           Supported: bullseye, bookworm, trixie.
+      when: ansible_distribution == "Debian"
+
     # Ubuntu
     - name: Assert Ubuntu codename is supported
       ansible.builtin.assert:
         that:
-          - ansible_distribution != "Ubuntu" or ansible_lsb.codename in ["jammy", "noble", "plucky"]
+          - ansible_lsb.codename in ["jammy", "noble", "plucky"]
         fail_msg: >
           Unsupported Ubuntu codename {{ ansible_lsb.codename }}.
           Supported: jammy, noble, plucky.
+      when: ansible_distribution == "Ubuntu"
+
     # Fedora
     - name: Assert Fedora version is supported
       ansible.builtin.assert:
         that:
-          - ansible_distribution != "Fedora" or (ansible_distribution_version.split('.')[0] | int) in [41, 42]
+          - (ansible_distribution_version.split('.')[0] | int) in [41, 42]
         fail_msg: >
           Unsupported Fedora version {{ ansible_distribution_version }}.
           Supported: 41, 42.
+      when: ansible_distribution == "Fedora"
+
     # RHEL/CentOS
     - name: Assert RHEL/CentOS version is supported
       ansible.builtin.assert:
         that:
-          - ansible_distribution not in ["RedHat", "CentOS"] or (ansible_distribution_version.split('.')[0] | int) in [8, 9]
+          - (ansible_distribution_version.split('.')[0] | int) in [8, 9]
         fail_msg: >
           Unsupported RHEL/CentOS version {{ ansible_distribution_version }}.
           Supported: 8, 9.
+      when: ansible_distribution in ["RedHat", "CentOS"]
+
     # Amazon Linux
     - name: Assert Amazon Linux version is supported
       ansible.builtin.assert:
         that:
-          - ansible_distribution != "Amazon" or ansible_distribution_version in ["2", "latest"]
+          - ansible_distribution_version in ["2", "latest"]
         fail_msg: >
           Unsupported Amazon Linux version {{ ansible_distribution_version }}.
           Supported: 2, latest.
+      when: ansible_distribution == "Amazon"
   rescue:
     - name: Fail play if OS is unsupported
       ansible.builtin.fail:
@@ -203,4 +218,4 @@
 
 - name: Set vault addr fact for each host # Needed for raft join dynamic templating
   ansible.builtin.set_fact:
-    hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
+    hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_port }}"

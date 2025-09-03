@@ -36,6 +36,20 @@
     file: check_vault_init.yml
   when: hashivault_deploy_bootstrap_enabled
 
+- name: Check Vault Seal status
+  ansible.builtin.import_tasks:
+    file: check_vault_seal.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_initialized
+
+- name: Unseal Vault
+  ansible.builtin.import_tasks:
+    file: unseal_vault.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+    - hashivault_deploy_initialized
+
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
     file: bootstrap_cluster.yml
@@ -53,4 +67,3 @@
   when:
     - hashivault_deploy_bootstrap_enabled
     - hashivault_deploy_seal_type == 'shamir'
-    - hashivault_deploy_sealed

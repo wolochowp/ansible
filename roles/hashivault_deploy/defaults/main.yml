@@ -17,8 +17,13 @@ hashivault_deploy_configure_firewall: none
 hashivault_deploy_bootstrap_enabled: true
 hashivault_deploy_use_env_file: true
 hashivault_deploy_env_file_content: {}
+# Use with ansible-vault prefferably
+# Example:
+# hashivault_deploy_env_file_content:
+#   AWS_ACCESS_KEY_ID: YOUR_AWS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY: YOUR_AWS_SECRET_KEY
 
-
+# Prefrred method to join raft cluster is to use retry_join setting but if you want to join by raft_join.yml ansible task set this to true
 hashivault_deploy_force_raft_join: false
 hashivault_deploy_systemd_extras: true
 # Additional systemd hardening options if hashivault_deploy_systemd_extras is true
@@ -41,12 +46,21 @@ hashivault_deploy_systemd_content:
 # =============================================================
 # 2. TLS / HTTPS Defaults
 # =============================================================
-hashivault_deploy_tls_enabled: false  # If false, ignores TLS
-hashivault_deploy_tls_wildcard: false
-hashivault_deploy_tls_wildcard_name: false
-hashivault_deploy_tls_cert_file: "/etc/vault/tls/vault.pem"
-hashivault_deploy_tls_key_file: "/etc/vault/tls/vault-key.pem"
+hashivault_deploy_tls_enabled: true
+hashivault_deploy_tls_cert_dir: "/etc/vault/tls"
+hashivault_deploy_mtls_enabled: true
 
+# Source dir (controller) for certs/keys/CA to deploy
+hashivault_deploy_tls_src_dir: "{{ role_path }}/files"
+
+# Wildcard settings
+hashivault_deploy_tls_wildcard: false
+hashivault_deploy_tls_wildcard_cert_file: "wildcard.pem"
+hashivault_deploy_tls_wildcard_key_file: "wildcard.key"
+
+# CA cert (optional)
+hashivault_deploy_tls_ca_file: "ca.pem"
+# If enabled TLS and not using wildcard certs, name the cert and key files like inventory_hostname.pem/.key in the tls_src_dir
 # =============================================================
 # 3. Vault Core Static Defaults
 # =============================================================
@@ -76,7 +90,7 @@ hashivault_deploy_token_save_path: "/secrets"
 hashivault_deploy_token_save_filename: "{{ hashivault_deploy_cluster_name }}-vault-init-keys.json"
 hashivault_deploy_shamir_key_shares: 5
 hashivault_deploy_shamir_key_threshold: 3
-hashivault_deploy_stored_shares: 1
+hashivault_deploy_stored_shares: 1 # Used for auto unseal
 hashivault_deploy_enable_recovery: true
 hashivault_deploy_recovery_key_shares: 5
 hashivault_deploy_recovery_key_threshold: 3
@@ -88,7 +102,9 @@ hashivault_deploy_recovery_key_threshold: 3
 hashivault_deploy_vault_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
 hashivault_deploy_bind_address: "{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
 hashivault_deploy_protocol: "{{ 'https' if hashivault_deploy_tls_enabled else 'http' }}"
-hashivault_deploy_api_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
-hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_port }}"
-hashivault_deploy_cluster_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_ip }}:{{ hashivault_deploy_vault_cluster_port }}"
+hashivault_deploy_vault_con_method: "{{ (hashivault_deploy_tls_enabled | bool) | ternary(hashivault_deploy_dns_name, hashivault_deploy_vault_ip) }}"
+hashivault_deploy_api_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_port }}"
+hashivault_deploy_vault_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_port }}"
+hashivault_deploy_cluster_addr: "{{ hashivault_deploy_protocol }}://{{ hashivault_deploy_vault_con_method }}:{{ hashivault_deploy_vault_cluster_port }}"
+
 hashivault_deploy_token: "{{ [hashivault_deploy_token_save_path, hashivault_deploy_token_save_filename] | path_join }}"

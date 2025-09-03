@@ -23,14 +23,26 @@ cluster_addr = "{{ hashivault_deploy_cluster_addr }}"
 # === Storage, seal, listener, telemetry ===
 {% if hashivault_deploy_storage_type == 'raft' %}
 storage "raft" {
-    path    = "{{ hashivault_deploy_raft_path | default('/opt/vault/data') }}"
+    path    = "{{ hashivault_deploy_data_dir }}"
     node_id = "{{ inventory_hostname }}"
 
-    {% for host in play_hosts | reject('equalto', inventory_hostname) %}
+   {% for host in play_hosts | reject('equalto', inventory_hostname) %}
     retry_join {
-        leader_api_addr = "{{ hostvars[host].hashivault_deploy_vault_addr }}"
-    }
-    {% endfor %}
+      leader_api_addr = "{{ hostvars[host].hashivault_deploy_vault_addr }}"
+    {% if hashivault_deploy_tls_enabled and hashivault_deploy_tls_ca_file %}
+      leader_ca_cert_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_ca_file }}"
+    {% endif %}
+    {% if hashivault_deploy_mtls_enabled %}
+      {% if hashivault_deploy_tls_wildcard %}
+      leader_client_cert_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_wildcard_cert_file }}"
+      leader_client_key_file  = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_wildcard_key_file }}"
+      {% else %}
+      leader_client_cert_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ inventory_hostname }}.pem"
+      leader_client_key_file  = "{{ hashivault_deploy_tls_cert_dir }}/{{ inventory_hostname }}.key"
+      {% endif %}
+    {% endif %}
+}
+{% endfor %}
 }
 {% else %}
 storage "{{ hashivault_deploy_storage_type }}" {
@@ -51,8 +63,16 @@ seal "{{ hashivault_deploy_seal_type }}" {
 listener "tcp" {
   address = "{{ hashivault_deploy_bind_address }}"
   {% if hashivault_deploy_tls_enabled %}
-  tls_cert_file = "{{ hashivault_deploy_tls_cert_file }}"
-  tls_key_file  = "{{ hashivault_deploy_tls_key_file }}"
+  {% if hashivault_deploy_tls_wildcard %}
+  tls_cert_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_wildcard_cert_file }}"
+  tls_key_file  = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_wildcard_key_file }}"
+  {% else %}
+  tls_cert_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ inventory_hostname }}.pem"
+  tls_key_file  = "{{ hashivault_deploy_tls_cert_dir }}/{{ inventory_hostname }}.key"
+  {% endif %}
+  {% if hashivault_deploy_tls_ca_file %}
+  tls_client_ca_file = "{{ hashivault_deploy_tls_cert_dir }}/{{ hashivault_deploy_tls_ca_file }}"
+  {% endif %}
   {% else %}
   tls_disable = 1
   {% endif %}

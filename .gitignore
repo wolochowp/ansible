@@ -31,3 +31,5 @@ roles/hashivault_deploy/hashivault_token.json
 
 # Temporary files
 *.retry
+
+roles/hashivault_deploy/files/*

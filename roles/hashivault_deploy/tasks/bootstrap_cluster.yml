@@ -42,6 +42,7 @@
       {%- endif -%}
 
       {{ payload | to_json }}
+  when: hashivault_deploy_bootstrap_allowed
 
 - name: Initialize Vault on leader node
   ansible.builtin.uri:
@@ -74,9 +75,12 @@
     - hashivault_deploy_bootstrap_allowed
   no_log: false
 
+- name: Get Seal status
+  ansible.builtin.include_tasks: check_vault_seal.yml
+
 - name: Unseal leader Vault node
   ansible.builtin.include_tasks: unseal_vault.yml
   when:
     - inventory_hostname == play_hosts[0]
-    - hashivault_deploy_bootstrap_allowed
+    - hashivault_deploy_bootstrap_allowed or hashivault_deploy_sealed
     - hashivault_deploy_seal_type == 'shamir'
