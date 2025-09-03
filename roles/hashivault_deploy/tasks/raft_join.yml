@@ -21,7 +21,6 @@
       loop: "{{ play_hosts }}"
       register: hashivault_deploy_vault_leader_check
       run_once: true
-      delegate_to: localhost
 
     - name: Detect unsealed leader node
       ansible.builtin.set_fact:
@@ -50,7 +49,6 @@
       run_once: true
       retries: 5
       delay: 5
-      delegate_to: localhost
 
     - name: Set list of joined nodes
       ansible.builtin.set_fact:
@@ -72,8 +70,3 @@
         status_code: 200
       when: inventory_hostname not in hashivault_deploy_joined_nodes
       register: hashivault_deploy_raft_join_result
-
-- name: Skip Raft join if token file not found
-  ansible.builtin.debug:
-    msg: "Token file '{{ hashivault_deploy_token }}' not found, skipping Raft join."
-  when: hashivault_deploy_token is not file

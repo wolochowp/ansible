@@ -7,6 +7,7 @@
     - lsb-release
     - gpg
     - wget
+    - curl
   become: true
   when: ansible_os_family == "Debian"
 
@@ -16,6 +17,7 @@
     - lsb_release
     - gpg
     - wget
+    - curl
    state: present
    update_cache: true
   become: true

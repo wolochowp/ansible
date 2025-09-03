@@ -23,18 +23,6 @@
   loop_control:
     label: "allow {{ item.1 }} on port {{ item.0.port }}"
 
-- name: Allow Vault API for Ansible controller
-  ansible.builtin.iptables:
-    chain: INPUT
-    protocol: tcp
-    source: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
-    destination_port: "{{ hashivault_deploy_vault_port }}"
-    jump: ACCEPT
-    state: present
-  loop: "{{ ansible_play_hosts }}"
-  loop_control:
-    label: "allow controller {{ item }}"
-
 # ----------------- Save rules -----------------
 - name: Persist iptables rules (Debian Family)
   ansible.builtin.command: netfilter-persistent save

@@ -1,25 +1,36 @@
-# SPDX-License-Identifier: MIT-0
+---
 galaxy_info:
-  author: Paweł Wołochow
-  description: "Ansible role to install and bootstrap HashiCorp Vault with configurable backend and seal types."
-  company: None
-  namespace: wolochowp
-  role_name: hashivault_deploy
-  # issue_tracker_url: http://example.com/issue/tracker
-
+  author: "Paweł Wołochow"
+  description: "Deploy and bootstrap HashiCorp Vault clusters with support for multiple storage backends and seal types."
+  company: ""
   license: MIT
+  role_name: hashivault_deploy
+  namespace: wolochowp
   min_ansible_version: "2.9"
-
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
   galaxy_tags:
     - vault
     - hashicorp
-    - secrets
     - security
-    - ansible
+    - secrets
+    - cluster
     - deployment
-    - bootstrap
-    - systemd
-    - configuration
     - automation
 
 dependencies: []

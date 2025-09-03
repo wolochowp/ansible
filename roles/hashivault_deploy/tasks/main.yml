@@ -46,6 +46,7 @@
     - hashivault_deploy_bootstrap_enabled
     - hashivault_deploy_status.initialized
     - hashivault_deploy_status.sealed
+    - hashivault_deploy_seal_type == "shamir"
 
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
