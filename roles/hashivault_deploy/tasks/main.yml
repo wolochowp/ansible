@@ -31,28 +31,31 @@
   ansible.builtin.import_tasks:
     file: deploy_systemd.yml
 
-- name: Check Vault Initialization status
+- name: Check/Update Vault status
   ansible.builtin.import_tasks:
-    file: check_vault_init.yml
-  when: hashivault_deploy_bootstrap_enabled
-
-- name: Check Vault Seal status
-  ansible.builtin.import_tasks:
-    file: check_vault_seal.yml
+    file: check_vault_status.yml
   when:
     - hashivault_deploy_bootstrap_enabled
-    - hashivault_deploy_initialized
 
 - name: Unseal Vault
   ansible.builtin.import_tasks:
     file: unseal_vault.yml
   when:
+    - hashivault_deploy_status.initialized is defined
+    - hashivault_deploy_status.sealed is defined
     - hashivault_deploy_bootstrap_enabled
-    - hashivault_deploy_initialized
+    - hashivault_deploy_status.initialized
+    - hashivault_deploy_status.sealed
 
 - name: Bootstrap Vault cluster
   ansible.builtin.import_tasks:
     file: bootstrap_cluster.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
+- name: Check/Update Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_status.yml
   when:
     - hashivault_deploy_bootstrap_enabled
 
@@ -61,9 +64,16 @@
   when:
     - (hashivault_deploy_storage_type == 'raft' and hashivault_deploy_storage_config.retry_join | length == 0) or hashivault_deploy_force_raft_join
 
+- name: Check/Update Vault status
+  ansible.builtin.import_tasks:
+    file: check_vault_status.yml
+  when:
+    - hashivault_deploy_bootstrap_enabled
+
 - name: Unseal Vault
   ansible.builtin.import_tasks:
     file: unseal_vault.yml
   when:
     - hashivault_deploy_bootstrap_enabled
     - hashivault_deploy_seal_type == 'shamir'
+    - hashivault_deploy_status.sealed

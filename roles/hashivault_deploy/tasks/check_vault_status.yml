@@ -1,0 +1,47 @@
+- name: Get Vault status via API
+  ansible.builtin.uri:
+    url: "{{ hashivault_deploy_vault_addr }}/v1/sys/health"
+    method: GET
+    return_content: true
+    status_code: 200,429,472
+  register: hashivault_deploy_status_raw
+  failed_when: false
+  changed_when: false
+
+- name: Set Vault status fact
+  ansible.builtin.set_fact:
+    hashivault_deploy_status: "{{ hashivault_deploy_status_raw.content | from_json }}"
+
+- name: Gather list of initialized hosts
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.set_fact:
+    hashivault_deploy_initialized_hosts: >-
+      {{
+        play_hosts
+        | select('defined')
+        | selectattr('hashivault_deploy_status', 'defined')
+        | selectattr('hashivault_deploy_status', 'initialized', 'equalto', true)
+        | list
+      }}
+
+- name: Gather list of sealed hosts
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.set_fact:
+    hashivault_deploy_sealed_hosts: >-
+      {{
+        play_hosts
+        | select('defined')
+        | selectattr('hashivault_deploy_status', 'defined')
+        | selectattr('hashivault_deploy_status', 'sealed', 'equalto', true)
+        | list
+      }}
+
+- name: Debug Vault status per host
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      full_status: "{{ hashivault_deploy_status }}"
+      initialized: "{{ hashivault_deploy_status.initialized }}"
+      sealed: "{{ hashivault_deploy_status.sealed }}"

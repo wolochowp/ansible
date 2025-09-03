@@ -55,7 +55,7 @@
   register: hashivault_deploy_vault_init
   when:
     - inventory_hostname == play_hosts[0]
-    - not hashivault_deploy_initialized
+    - not hashivault_deploy_status.initialized
     - hashivault_deploy_bootstrap_allowed
   run_once: true
   no_log: true
@@ -70,17 +70,17 @@
   run_once: true
   when:
     - inventory_hostname == play_hosts[0]
-    - not hashivault_deploy_initialized
+    - not hashivault_deploy_status.initialized
     - hashivault_deploy_vault_init is defined
     - hashivault_deploy_bootstrap_allowed
   no_log: false
 
-- name: Get Seal status
-  ansible.builtin.include_tasks: check_vault_seal.yml
+- name: Get Vault Status
+  ansible.builtin.include_tasks: check_vault_status.yml
 
 - name: Unseal leader Vault node
   ansible.builtin.include_tasks: unseal_vault.yml
   when:
     - inventory_hostname == play_hosts[0]
-    - hashivault_deploy_bootstrap_allowed or hashivault_deploy_sealed
+    - hashivault_deploy_bootstrap_allowed or hashivault_deploy_status.sealed
     - hashivault_deploy_seal_type == 'shamir'

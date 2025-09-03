@@ -1,6 +1,8 @@
 - name: Join Vault node to Raft cluster if token file exists
   when: hashivault_deploy_token is file
   block:
+
+    # === Load root token ===
     - name: Load root token from controller file
       ansible.builtin.slurp:
         src: "{{ hashivault_deploy_token }}"
@@ -15,7 +17,7 @@
         url: "{{ hostvars[item].hashivault_deploy_vault_addr }}/v1/sys/leader"
         method: GET
         return_content: true
-        status_code: [200, 503]   # allow sealed nodes
+        status_code: [200, 503]  # allow sealed nodes
       loop: "{{ play_hosts }}"
       register: hashivault_deploy_vault_leader_check
       run_once: true
@@ -35,7 +37,7 @@
       run_once: true
       delegate_to: localhost
 
-    # === Use detected leader for Raft config ===
+    # === Get Raft cluster configuration from leader ===
     - name: Get current Raft cluster members from leader
       ansible.builtin.uri:
         url: "{{ hashivault_deploy_vault_leader_addr }}/v1/sys/storage/raft/configuration"
@@ -46,15 +48,18 @@
         status_code: 200
       register: hashivault_deploy_raft_config
       run_once: true
+      retries: 5
+      delay: 5
       delegate_to: localhost
 
     - name: Set list of joined nodes
       ansible.builtin.set_fact:
         hashivault_deploy_joined_nodes: >-
-          {{ hashivault_deploy_raft_config.json.data.config.servers | map(attribute='address') | list }}
-      no_log: false
+          {{ hashivault_deploy_raft_config.json.data.config.servers | map(attribute='node_id') | list }}
       delegate_to: localhost
+      no_log: false
 
+    # === Join node if not already in cluster ===
     - name: Join this node to Raft cluster if not already joined
       ansible.builtin.uri:
         url: "{{ hashivault_deploy_vault_addr }}/v1/sys/storage/raft/join"
@@ -65,9 +70,8 @@
         body:
           leader_api_addr: "{{ hashivault_deploy_vault_leader_addr }}"
         status_code: 200
-      when: hashivault_deploy_vault_addr not in hashivault_deploy_joined_nodes
+      when: inventory_hostname not in hashivault_deploy_joined_nodes
       register: hashivault_deploy_raft_join_result
-      no_log: false
 
 - name: Skip Raft join if token file not found
   ansible.builtin.debug:

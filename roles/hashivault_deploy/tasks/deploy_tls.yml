@@ -25,7 +25,7 @@
         | ternary(hashivault_deploy_tls_wildcard_key_file,
                   inventory_hostname ~ '.key')) }}
 
-- name: Copy Vault TLS certificate (fullchain)
+- name: Copy Vault TLS certificate
   ansible.builtin.copy:
     src: "{{ hashivault_deploy_tls_cert_src_path }}"
     dest: "{{ hashivault_deploy_tls_cert_dest_path }}"
