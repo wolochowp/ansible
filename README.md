@@ -1,6 +1,6 @@
 # Ansible Roles
 
-A curated collection of reusable and well-structured **Ansible roles** designed for automation of real-world infrastructure tasks — beginning with MikroTik RouterOS backup management and SSH key provisioning.
+A curated collection of reusable and well-structured **Ansible roles** designed for automation of real-world infrastructure tasks — beginning with MikroTik RouterOS backup management and SSH key provisioning and ending with advanced Hashicorp Vault Cluster Auto Installation and Configuration.
 
 ---
 
